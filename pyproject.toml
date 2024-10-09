@@ -16,8 +16,4 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["threedftoolbox"]
-
-[tool.setuptools]
-package-dir = {"" = "threedftoolbox"}
-
+include = ["threedftoolbox*"]
