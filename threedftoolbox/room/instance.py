@@ -4,8 +4,8 @@ instance
 """
 
 import numpy as np
-from Room.bounding_box import BoundingBox
-from Room.mesh import Mesh
+from threedftoolbox.room.bounding_box import BoundingBox
+from threedftoolbox.room.mesh import Mesh
 
 
 class Instance:

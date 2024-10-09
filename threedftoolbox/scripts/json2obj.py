@@ -1,6 +1,6 @@
 import os,argparse
-from scene import read_json
-from constants import Config
+from threedftooolbox.scripts.scene import read_json
+from threedftoolbox.scripts.constants import Config
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

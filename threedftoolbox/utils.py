@@ -1,9 +1,9 @@
 import numpy as np
 import shapely.geometry as sg
-from Room.scene import Scene
-from Room.process_json import process_json_house
+from threedftoolbox.room.scene import Scene
+from threedftoolbox.room.process_json import process_json_house
 import json
-from Room.Preprocess.run import scene_to_floorplan
+from threedftoolbox.room.preprocess.run import scene_to_floorplan
 
 
 

@@ -3,9 +3,9 @@ import json
 import numpy as np
 import os
 
-from Room.instance import Instance
-from Room.room import Room
-from Room.mesh import Mesh
+from threedftoolbox.room.instance import Instance
+from threedftoolbox.room.room import Room
+from threedftoolbox.room.mesh import Mesh
 
 
 def process_json_house(scene):

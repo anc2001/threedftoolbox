@@ -1,8 +1,8 @@
 import numpy as np
 import sys
 import copy
-from Room.math_engine import get_nearest_para
-from Room.bounding_box import BoundingBox
+from threedftoolbox.room.math_engine import get_nearest_para
+from threedftoolbox.room.bounding_box import BoundingBox
 
 
 dist_epsilon = 1e-2

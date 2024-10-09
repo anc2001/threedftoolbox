@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*
 
 import numpy as np
-from Room.mesh import Mesh
-from Room.bounding_box import BoundingBox
+from threedftoolbox.room.mesh import Mesh
+from threedftoolbox.room.bounding_box import BoundingBox
 import json
 import os
 
-from Room.math_engine import *
+from threedftoolbox.room.math_engine import *
 
 
 class Scene:

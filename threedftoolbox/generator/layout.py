@@ -1,7 +1,7 @@
 from variables import *
-from Generator.interface import *
-from Generator.camera import CameraInstance
-from Generator.model import ModelInstance
+from threedftoolbox.generator.interface import *
+from threedftoolbox.generator.camera import CameraInstance
+from threedftoolbox.generator.model import ModelInstance
 
 
 class LayoutInstance:

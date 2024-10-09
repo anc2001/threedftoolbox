@@ -2,7 +2,7 @@
 import sys
 import numpy as np
 
-from Room.math_engine import *
+from threedftoolbox.room.math_engine import *
 
 
 class BoundingBox:

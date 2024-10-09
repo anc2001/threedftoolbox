@@ -1,8 +1,8 @@
 import json
 from utils import *
 from variables import *
-from Generator.run import Generator
-from Generator.layout import LayoutInstance
+from threedftoolbox.generator.run import Generator
+from threedftoolbox.generator.layout import LayoutInstance
 
 
 

@@ -1,6 +1,6 @@
 import json
 import argparse
-from adapted import AdaptedCameras
+from threedftoolbox.adapted import AdaptedCameras
 
 parser = argparse.ArgumentParser(description='Camera Generating...')
 parser.add_argument('--input', type=str, default='input.json', help='Input scene json file')

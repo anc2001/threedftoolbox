@@ -1,7 +1,7 @@
 # # -*- coding: utf-8 -*
 import numpy as np
-from Room.bounding_box import BoundingBox
-from Room.math_engine import *
+from threedftoolbox.room.bounding_box import BoundingBox
+from threedftoolbox.room.math_engine import *
 
 
 class Entity:

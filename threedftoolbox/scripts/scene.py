@@ -1,9 +1,9 @@
 import json
 import numpy as np
-from utils import read_obj, save_obj, read_mesh_attr, transform_v, save_mesh
+from threedftoolbox.scripts.utils import read_obj, save_obj, read_mesh_attr, transform_v, save_mesh
 import os
 import urllib.request
-from constants import Config
+from threedftoolbox.scripts.constants import Config
 
 
 

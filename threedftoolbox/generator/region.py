@@ -1,7 +1,7 @@
 import shapely.geometry as sg
-from Generator.interface import *
-from Generator.model import ModelInstance
-from Generator.camera import CameraInstance
+from threedftoolbox.generator.interface import *
+from threedftoolbox.generator.model import ModelInstance
+from threedftoolbox.generator.camera import CameraInstance
 
 
 

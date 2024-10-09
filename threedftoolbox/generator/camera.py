@@ -1,5 +1,5 @@
 import numpy as np
-from Generator.interface import *
+from threedftoolbox.generator.interface import *
 
 
 class CameraInstance:
