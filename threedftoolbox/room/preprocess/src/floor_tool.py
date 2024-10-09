@@ -4,25 +4,27 @@ from shapely.ops import cascaded_union
 import numpy as np
 from tools import ToolKit
 
+
 class FloorTool(object):
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         self.threshold = 1e3
         self.MAX_GRADIENT_VALUE = 90
 
         self.floor_line_list = []
         self.clockwise_line_list = []
-        
+
         self.floor_polygon_list = []
 
         self.tool = ToolKit()
 
-
     def connect_line_clockwise(self, line_list):
         """converse floor line in clockwise
-        
+
         Arguments:
             line_list {no order} -- a list of line
-        
+
         Returns:
             [x1, y1, x2, y2, ... ] -- a list of clockwise line
         """
@@ -47,10 +49,10 @@ class FloorTool(object):
             self.clockwise_line_list = self.find_union_polygons()
 
         if len(self.clockwise_line_list) > 0:
-            return True 
+            return True
         else:
             return False
-    
+
     def deplicate_overlap(self, line_list):
 
         angle_list = []
@@ -85,8 +87,12 @@ class FloorTool(object):
                     for i, idx in enumerate(idx_list):
                         if i > 0:
                             line_idx = line_list[idx]
-                            tmp_angle1 = self.tool.comp_line_angle([line_idx[0], first_line[0]])
-                            tmp_angle2 = self.tool.comp_line_angle([line_idx[1], first_line[0]])
+                            tmp_angle1 = self.tool.comp_line_angle(
+                                [line_idx[0], first_line[0]]
+                            )
+                            tmp_angle2 = self.tool.comp_line_angle(
+                                [line_idx[1], first_line[0]]
+                            )
 
                             tmp_angle1 = self.angle_transfer(tmp_angle1)
                             tmp_angle2 = self.angle_transfer(tmp_angle2)
@@ -113,7 +119,7 @@ class FloorTool(object):
 
                     for idx_del in idx_del_list:
                         idx_list.remove(idx_del)
-            
+
             if len(collinear_line_list) > 0:
                 clear_line_list.append(collinear_line_list)
 
@@ -121,7 +127,7 @@ class FloorTool(object):
         add_line_list = []
 
         if len(clear_line_list) > 0:
-            for clear_line_4 in  clear_line_list:
+            for clear_line_4 in clear_line_list:
                 for clear_line_3 in clear_line_4:
                     x_point_list = []
                     y_point_list = []
@@ -132,7 +138,10 @@ class FloorTool(object):
                         y_point_list.append(line[0][1])
                         y_point_list.append(line[1][1])
 
-                    sorted_point_list = [list(item) for item in zip(np.sort(x_point_list), np.sort(y_point_list))]
+                    sorted_point_list = [
+                        list(item)
+                        for item in zip(np.sort(x_point_list), np.sort(y_point_list))
+                    ]
 
                     new_point_list = []
                     for point in sorted_point_list:
@@ -140,17 +149,23 @@ class FloorTool(object):
                             new_point_list.append(point)
 
                     sorted_line_list = []
-                    for i in range(len(new_point_list)-1):
-                        sorted_line_list.append([new_point_list[i], new_point_list[i+1]])
+                    for i in range(len(new_point_list) - 1):
+                        sorted_line_list.append(
+                            [new_point_list[i], new_point_list[i + 1]]
+                        )
 
                     sorted_line_dict = {}
-                    
+
                     for i, sorted_line in enumerate(sorted_line_list):
-                        
+
                         sorted_line_dict[i] = 0
                         occur_num = 0
                         for line in clear_line_3:
-                            if self.tool.is_on_line(line[0], line[1], sorted_line[0]) and self.tool.is_on_line(line[0], line[1], sorted_line[1]):
+                            if self.tool.is_on_line(
+                                line[0], line[1], sorted_line[0]
+                            ) and self.tool.is_on_line(
+                                line[0], line[1], sorted_line[1]
+                            ):
                                 occur_num += 1
                         sorted_line_dict[i] = occur_num
 
@@ -165,7 +180,6 @@ class FloorTool(object):
 
         return line_list
 
-
     def angle_transfer(self, angle):
         if angle == 180:
             angle = 0
@@ -173,25 +187,23 @@ class FloorTool(object):
             angle = 90
         return angle
 
-
     def clear_line(self, line1, line2):
-        
+
         if line1[0] in line2:
-            line2_rest_point = line2[1-line2.index(line1[0])]
+            line2_rest_point = line2[1 - line2.index(line1[0])]
             angle1 = self.tool.comp_line_angle([line1[1], line2_rest_point])
             angle2 = self.tool.comp_line_angle([line1[1], line1[0]])
             if (angle1 + angle2) == 0 and angle1 != angle2:
                 return [line1[1], line2_rest_point]
-        
+
         if line1[1] in line2:
-            line2_rest_point = line2[1-line2.index(line1[1])]
+            line2_rest_point = line2[1 - line2.index(line1[1])]
             angle1 = self.tool.comp_line_angle([line1[0], line2_rest_point])
             angle2 = self.tool.comp_line_angle([line1[0], line1[1]])
             if (angle1 + angle2) == 0 and angle1 != angle2:
                 return [line1[0], line2_rest_point]
-        
-        return []
 
+        return []
 
     def find_union_polygons(self):
 
@@ -220,16 +232,21 @@ class FloorTool(object):
 
             # union_floor_line_list = mapping(multi_polygon)['coordinates'][0]
 
-            union_polygon_list = mapping(multi_polygon)['coordinates']
+            union_polygon_list = mapping(multi_polygon)["coordinates"]
             union_polygon_dim = np.ndim(union_polygon_list)
 
             floor_poly_list = []
             if union_polygon_dim == 3:
                 self.floor_line_list = []
                 union_floor_line_list = union_polygon_list[0]
-                for i in range(len(union_floor_line_list)-1):
-                    line = [[union_floor_line_list[i][0], union_floor_line_list[i][1]], 
-                            [union_floor_line_list[i+1][0], union_floor_line_list[i+1][1]]]
+                for i in range(len(union_floor_line_list) - 1):
+                    line = [
+                        [union_floor_line_list[i][0], union_floor_line_list[i][1]],
+                        [
+                            union_floor_line_list[i + 1][0],
+                            union_floor_line_list[i + 1][1],
+                        ],
+                    ]
                     self.floor_line_list.append(line)
                 floor_poly_list.append(self.generate_floor_polygon())
                 return floor_poly_list
@@ -238,14 +255,18 @@ class FloorTool(object):
                 for union_poly in union_polygon_list:
                     self.floor_line_list = []
                     union_floor_line_list = union_poly[0]
-                    for i in range(len(union_floor_line_list)-1):
-                        line = [[union_floor_line_list[i][0], union_floor_line_list[i][1]], 
-                                [union_floor_line_list[i+1][0], union_floor_line_list[i+1][1]]]
+                    for i in range(len(union_floor_line_list) - 1):
+                        line = [
+                            [union_floor_line_list[i][0], union_floor_line_list[i][1]],
+                            [
+                                union_floor_line_list[i + 1][0],
+                                union_floor_line_list[i + 1][1],
+                            ],
+                        ]
                         self.floor_line_list.append(line)
                     floor_poly_list.append(self.generate_floor_polygon())
 
                 return floor_poly_list
-
 
     def generate_floor_polygon(self):
         floor_polygon = []
@@ -271,7 +292,6 @@ class FloorTool(object):
 
         return floor_polygon
 
-
     def find_next_line(self, start_line, line_list):
 
         next_line = []
@@ -293,15 +313,14 @@ class FloorTool(object):
 
         return next_line
 
-
     def find_start_line(self, line_list):
         """find start line, for sorted line in clockwise
-        
+
         Arguments:
             line_list  -- input line list
-        
+
         Returns:
-            [x1, y1] -- the top line 
+            [x1, y1] -- the top line
         """
         start_line = []
         # find top point
@@ -316,7 +335,7 @@ class FloorTool(object):
                 two_top_line.append(line)
                 if len(two_top_line) == 2:
                     break
-                    
+
         if len(angles_two_top_line) == 0:
             return []
 
@@ -338,10 +357,9 @@ class FloorTool(object):
 
         return start_line
 
-
     def find_top_point(self, line_list):
         """find the top point
-        
+
         Returns:
             [x1, y1] -- coordinate of one of top point
         """
@@ -355,12 +373,10 @@ class FloorTool(object):
             x_list.append(line[1][0])
             z_list.append(line[0][1])
             z_list.append(line[1][1])
-        
+
         max_z = max(z_list)
         # num_max_z = z_list.count(max_z)
         index_max_z = z_list.index(max_z)
         top_point = [x_list[index_max_z], z_list[index_max_z]]
 
         return top_point
-
-

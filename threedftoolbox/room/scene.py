@@ -15,19 +15,17 @@ class Scene:
     """
 
     def __init__(self, uid, content):
-        self.uid = uid                                          # uid
-        self.dict_instance_for_mesh = {}                        # floor, window ...
-        self.dict_instance_for_furniture = {}                   # furniture
-        self.dict_room = {}                                     # room
-        self.position = np.zeros(3)                             # [0,0,0]
-        self.rotation = np.array([0.0, 0.0, 0.0, 1.0])          # [0,0,0,1]
-        self.scale = np.array([1.0, 1.0, 1.0])                  # [1,1,1]
-        self.content = content                                  # json
+        self.uid = uid  # uid
+        self.dict_instance_for_mesh = {}  # floor, window ...
+        self.dict_instance_for_furniture = {}  # furniture
+        self.dict_room = {}  # room
+        self.position = np.zeros(3)  # [0,0,0]
+        self.rotation = np.array([0.0, 0.0, 0.0, 1.0])  # [0,0,0,1]
+        self.scale = np.array([1.0, 1.0, 1.0])  # [1,1,1]
+        self.content = content  # json
 
     def __repr__(self):
-        return 'Scene %s' % (
-            self.uid
-        )
+        return "Scene %s" % (self.uid)
 
     def add_instance_for_furniture(self, id, instance):
         """
@@ -98,7 +96,6 @@ class Scene:
         else:
             return 0
 
-
     def delete_furniture_to_content(self, uid):
         """
         :param uid: id
@@ -107,9 +104,9 @@ class Scene:
         if len(self.content) == 0:
             return
 
-        for i, furniture in enumerate(self.content['furniture']):
-            if furniture['uid'] == uid:
-                del self.content['furniture'][i]
+        for i, furniture in enumerate(self.content["furniture"]):
+            if furniture["uid"] == uid:
+                del self.content["furniture"][i]
                 return
 
     def delete_furniture(self, instance):
@@ -118,7 +115,7 @@ class Scene:
         :return:
         """
         instance.ref -= 1
-        if (instance.ref == 0):
+        if instance.ref == 0:
             del self.dict_instance_for_furniture[instance.uid]
             self.delete_furniture_to_content(instance.uid)
 
@@ -135,10 +132,7 @@ class Scene:
         """
         return self.content
 
-
     def save_json(self, file_name):
         args = self.get_json()
-        with open(file_name, 'w') as f:
+        with open(file_name, "w") as f:
             json.dump(args, f, ensure_ascii=False)
-
-

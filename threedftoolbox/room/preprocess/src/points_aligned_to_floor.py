@@ -6,9 +6,11 @@ from logger import logger
 
 
 class PointAlignedToFloor(object):
-    """align point to floor, first two point on the floor
-    """
-    def __init__(self,):
+    """align point to floor, first two point on the floor"""
+
+    def __init__(
+        self,
+    ):
         self.tool = ToolKit()
         self.new_pts_list = []
 
@@ -41,10 +43,12 @@ class PointAlignedToFloor(object):
                 first_two_point_dis = 0
 
                 for pts_point in pts:
-                    is_collinear, dis = self.tool.is_collinear_three_points(floor_line[0], floor_line[1], pts_point)
+                    is_collinear, dis = self.tool.is_collinear_three_points(
+                        floor_line[0], floor_line[1], pts_point
+                    )
                     is_collinear_list.append(is_collinear)
                     dis_list.append(dis)
-                    
+
                 # compute sum of the smallest two dis
                 smallest_num = heapq.nsmallest(2, dis_list)
                 first_two_point_dis = smallest_num[0] + smallest_num[1]
@@ -56,14 +60,14 @@ class PointAlignedToFloor(object):
                     is_found = True
                     new_pts = self.reorder_point_normal(pts, is_collinear_list)
                     if len(new_pts) == 0:
-                        logger.e('find first two closest point error ...')
+                        logger.e("find first two closest point error ...")
                         break
                     elif len(new_pts) > 0:
                         self.new_pts_list.append(new_pts)
                         break
 
             if not is_found:
-                
+
                 new_pts = self.reorder_point_abnormal(pts, dis_all_list, sum_dis_list)
                 if len(new_pts) == 0:
                     new_floor_list = []
@@ -71,27 +75,26 @@ class PointAlignedToFloor(object):
                         new_floor_list.append(floor_line[0])
                     floor_poly = Polygon(self.tool.list_to_tuple(new_floor_list))
                     new_pts = self.reorder_point_dysmorphism(pts, floor_poly)
-            
+
                 if len(new_pts) == 0:
-                    logger.e('find first two closest point error ...')    
-                    continue 
+                    logger.e("find first two closest point error ...")
+                    continue
                 else:
-                    self.new_pts_list.append(new_pts)     
+                    self.new_pts_list.append(new_pts)
 
         if len(self.new_pts_list) != len(pts_list):
-            logger.w('lost object')
+            logger.w("lost object")
         if len(self.new_pts_list) > 0:
             return True
         else:
             return False
-
 
     def reorder_point_dysmorphism(self, pts, floor_poly):
 
         dis_to_polyg_list = []
         for point in pts:
             if floor_poly.contains(Point(point)):
-                dis_to_polyg_list.append(0.)
+                dis_to_polyg_list.append(0.0)
             else:
                 dis_to_polyg_list.append(floor_poly.boundary.distance(Point(point)))
 
@@ -100,14 +103,13 @@ class PointAlignedToFloor(object):
         if index_list == [0, 1] or index_list == [1, 0]:
             return [pts[1], pts[0], pts[3], pts[2]]
         elif index_list == [1, 2] or index_list == [2, 1]:
-            return [pts[2], pts[1], pts[0], pts[3]]           
+            return [pts[2], pts[1], pts[0], pts[3]]
         elif index_list == [2, 3] or index_list == [3, 2]:
             return [pts[3], pts[2], pts[1], pts[0]]
         elif index_list == [0, 3] or index_list == [3, 0]:
             return [pts[0], pts[3], pts[2], pts[1]]
         else:
             return []
-
 
     def reorder_point_abnormal(self, pts, dis_all_list, sum_dis_list):
 
@@ -118,21 +120,25 @@ class PointAlignedToFloor(object):
 
         index_list = []
         if smallest_two_dis[0] == smallest_two_dis[1]:
-            index_list = [i for i, v in enumerate(dis_select) if v == smallest_two_dis[0]]
+            index_list = [
+                i for i, v in enumerate(dis_select) if v == smallest_two_dis[0]
+            ]
         else:
-            index_list = [dis_select.index(smallest_two_dis[0]), dis_select.index(smallest_two_dis[1])]
+            index_list = [
+                dis_select.index(smallest_two_dis[0]),
+                dis_select.index(smallest_two_dis[1]),
+            ]
 
         if index_list == [0, 1] or index_list == [1, 0]:
             return [pts[1], pts[0], pts[3], pts[2]]
         elif index_list == [1, 2] or index_list == [2, 1]:
-            return [pts[2], pts[1], pts[0], pts[3]]           
+            return [pts[2], pts[1], pts[0], pts[3]]
         elif index_list == [2, 3] or index_list == [3, 2]:
             return [pts[3], pts[2], pts[1], pts[0]]
         elif index_list == [0, 3] or index_list == [3, 0]:
             return [pts[0], pts[3], pts[2], pts[1]]
         else:
             return []
-
 
     def reorder_point_normal(self, pts, is_collinear_list):
         """reorder point, if len(is_collinear_list) == 2
@@ -152,8 +158,7 @@ class PointAlignedToFloor(object):
         elif is_collinear_list == [True, False, False, True]:
             return [pts[0], pts[3], pts[2], pts[1]]
         else:
-            return []                                        
-
+            return []
 
     def six_to_four(self, six_pts_list):
 
@@ -163,7 +168,7 @@ class PointAlignedToFloor(object):
         for pts in six_pts_list:
             x_list.append(pts[0])
             z_list.append(pts[1])
-        center_point = [sum(x_list)/points_num, sum(z_list)/points_num]
+        center_point = [sum(x_list) / points_num, sum(z_list) / points_num]
 
         dis_list = []
         for pts in six_pts_list:
@@ -177,7 +182,6 @@ class PointAlignedToFloor(object):
                 new_pts_list.append(six_pts_list[idx])
 
         return new_pts_list
-
 
     def find_nsmallest_num(self, pts_list, n):
         tmp = []

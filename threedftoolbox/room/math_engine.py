@@ -14,7 +14,7 @@ def to_utf8(str):
     :param str:
     :return:
     """
-    return str.encode('utf-8', 'surrogateescape').decode('utf-8')
+    return str.encode("utf-8", "surrogateescape").decode("utf-8")
 
 
 def clamp(value, low, high):
@@ -69,8 +69,8 @@ def calculate_degree(p1, p2):
     elif math.fabs(dot + 1.0) <= epsilon:
         return 180.0
 
-    p1pow = p1 ** 2
-    p2pow = p2 ** 2
+    p1pow = p1**2
+    p2pow = p2**2
     angle = math.acos(dot / math.sqrt((p1pow[0] + p1pow[2]) * (p2pow[0] + p2pow[2])))
     cross = p1[0] * p2[2] - p1[2] * p2[0]
     if cross < 0.0:
@@ -93,16 +93,22 @@ def calculate_degree(p1, p2):
 
 
 def cross(va, vb):
-    return np.array([va[1]*vb[2]-va[2]*vb[1], va[2]*vb[0]-va[0]*vb[2], va[0]*vb[1]-va[1]*vb[0]])
+    return np.array(
+        [
+            va[1] * vb[2] - va[2] * vb[1],
+            va[2] * vb[0] - va[0] * vb[2],
+            va[0] * vb[1] - va[1] * vb[0],
+        ]
+    )
 
 
 def cross_2d(v1, v2):
-    return v1[0]*v2[1] - v1[1]*v2[0]
+    return v1[0] * v2[1] - v1[1] * v2[0]
 
 
 def normalize(v):
-    len = 1.0 / math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])
-    return np.array([v[0]*len, v[1]*len, v[2]*len])
+    len = 1.0 / math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+    return np.array([v[0] * len, v[1] * len, v[2] * len])
 
 
 def normallize_2d(v):
@@ -115,7 +121,7 @@ def length2(v):
 
 
 def length2_2d(v):
-    return v[0]*v[0] + v[1]*v[1]
+    return v[0] * v[0] + v[1] * v[1]
 
 
 # boolean operation
@@ -158,7 +164,7 @@ def polygon_polygon_intersection(poly1, poly2):
     p2 = sg.Polygon(poly2)
     inter = p1.intersection(p2)
 
-    if inter.type != 'Polygon':
+    if inter.type != "Polygon":
         return np.zeros(0)
 
     ar = np.array(inter.exterior.coords.xy)
@@ -182,24 +188,24 @@ def polygon_polygon_intersection(poly1, poly2):
     # return np.zeros(0)
 
 
-def line_polygon_intersects(line, polygon, enable_touch = False):
+def line_polygon_intersects(line, polygon, enable_touch=False):
     """
     intersection between line and plane
     :param line:
     :param polygon:
-    :param enable_touch: enable_touch = True 
+    :param enable_touch: enable_touch = True
     :return: boolean
     """
     p1 = sg.Polygon(polygon)
     l1 = sg.LineString(line)
     inter = l1.intersection(p1)
-    if inter.type == 'GeometryCollection':
+    if inter.type == "GeometryCollection":
         return False
 
     if not enable_touch:
         loop = sg.LinearRing(polygon)
         inter_lp = inter.intersection(loop)
-        if inter_lp.type == 'Point' or inter_lp.type == 'MultiPoint':
+        if inter_lp.type == "Point" or inter_lp.type == "MultiPoint":
             return True
         return False
     else:
@@ -216,18 +222,18 @@ def line_polygon_intersection(line, polygon):
     p1 = sg.Polygon(polygon)
     l1 = sg.LineString(line)
     inter = l1.intersection(p1)
-    if inter.type == 'GeometryCollection':
+    if inter.type == "GeometryCollection":
         return np.zeros(0)
 
     ar = np.array(inter)
-    return np.array(list(zip(ar[:,0], ar[:,1])))
+    return np.array(list(zip(ar[:, 0], ar[:, 1])))
 
 
 def line_to_polygon_by_line(line, dir, offset):
     """
-    :param line: 
-    :param dir: 
-    :param offset: 
+    :param line:
+    :param dir:
+    :param offset:
     :return:
     """
     point_a = line[0]
@@ -255,9 +261,9 @@ def polygon_polygon_touch(poly1, poly2):
     p2 = sg.LinearRing(poly2)
     inter = p1.intersection(p2)
 
-    if inter.type == 'LineString':
+    if inter.type == "LineString":
         return np.array(inter)
-    elif inter.type == 'MultiLineString':
+    elif inter.type == "MultiLineString":
         ar = []
         for line in inter:
             ar += list(zip(line.xy[0], line.xy[1]))
@@ -277,9 +283,9 @@ def line_line_intersection(line1, line2):
     inter = l1.intersection(l2)
 
     start_pt = line1[0]
-    if inter.type == 'Point':
+    if inter.type == "Point":
         return np.array(inter)
-    elif inter.type == 'MultiPoint':
+    elif inter.type == "MultiPoint":
         first = np.array(inter)[0]
         last = np.array(inter)[-1]
         if sum((first - start_pt) ** 2) < sum((last - start_pt) ** 2):
@@ -304,7 +310,7 @@ def line_line_intersects(line1, line2):
 
 def check_common_line(v1, v2, v3):
     """
-    
+
     :param v1:
     :param v2:
     :param v3:
@@ -337,7 +343,9 @@ def merge_polygon(vertex_array, index_array):
             v2 = vertex_array[3 * index_array[i + j] + 2]
             v_list.append([v1, v2])
 
-        if check_common_line(np.array(v_list[0]), np.array(v_list[1]), np.array(v_list[2])):
+        if check_common_line(
+            np.array(v_list[0]), np.array(v_list[1]), np.array(v_list[2])
+        ):
             continue
 
         if poly == 0:
@@ -349,7 +357,7 @@ def merge_polygon(vertex_array, index_array):
     if poly == 0:
         return []
 
-    if poly.type == 'MultiPolygon':
+    if poly.type == "MultiPolygon":
         tt = poly.wkt
 
     ar_xy = poly.exterior.coords.xy
@@ -436,10 +444,18 @@ def quaternion_muli(qua1, qua2):
     :return:
     """
     result = np.zeros(4)
-    result[0] = qua1[3] * qua2[0] + qua1[0] * qua2[3] + qua1[1] * qua2[2] - qua1[2] * qua2[1]
-    result[1] = qua1[3] * qua2[1] + qua1[1] * qua2[3] + qua1[2] * qua2[0] - qua1[0] * qua2[2]
-    result[2] = qua1[3] * qua2[2] + qua1[2] * qua2[3] + qua1[0] * qua2[1] - qua1[1] * qua2[0]
-    result[3] = qua1[3] * qua2[3] - qua1[0] * qua2[0] - qua1[1] * qua2[1] - qua1[2] * qua2[2]
+    result[0] = (
+        qua1[3] * qua2[0] + qua1[0] * qua2[3] + qua1[1] * qua2[2] - qua1[2] * qua2[1]
+    )
+    result[1] = (
+        qua1[3] * qua2[1] + qua1[1] * qua2[3] + qua1[2] * qua2[0] - qua1[0] * qua2[2]
+    )
+    result[2] = (
+        qua1[3] * qua2[2] + qua1[2] * qua2[3] + qua1[0] * qua2[1] - qua1[1] * qua2[0]
+    )
+    result[3] = (
+        qua1[3] * qua2[3] - qua1[0] * qua2[0] - qua1[1] * qua2[1] - qua1[2] * qua2[2]
+    )
 
     # check if error
     if np.sum(abs(identity_rot + result)) < 0.001:
@@ -463,7 +479,7 @@ def quaternion_invert(qua):
     return result
 
 
-def dir_to_quaternion(dir, axis = np.array([0.0, 0.0, 1.0])):
+def dir_to_quaternion(dir, axis=np.array([0.0, 0.0, 1.0])):
     """
     :param dir: numpy [0,0,1]
     :param axis
@@ -476,7 +492,7 @@ def dir_to_quaternion(dir, axis = np.array([0.0, 0.0, 1.0])):
     return quaternion_from_axis(angle, np.array([0.0, 1.0, 0.0]))
 
 
-def quaternion_to_dir(qua, axis = np.array([0, 0, 1])):
+def quaternion_to_dir(qua, axis=np.array([0, 0, 1])):
     """
     :param qua: quaternion
     :param axis: direction
@@ -609,7 +625,14 @@ def is_visible_by_point(point, view_project_matrix):
 
     p_x, p_y, p_depth = project_point(point, view_project_matrix)
 
-    if p_x > 0.99 or p_x < -0.99 or p_y > 0.99 or p_y < -0.99 or p_depth > 0.99 or p_depth < 0.001:
+    if (
+        p_x > 0.99
+        or p_x < -0.99
+        or p_y > 0.99
+        or p_y < -0.99
+        or p_depth > 0.99
+        or p_depth < 0.001
+    ):
         return False
 
     return True

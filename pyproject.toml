@@ -7,12 +7,18 @@ name = "threedftoolbox"
 version = "0.1.0"
 description = "Toolbox for 3D-FRONT dataset"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.7"
 dependencies = [
-    "numpy",
+    "numpy>=1.2.0",
     "scipy",
     "libigl",
     "shapely",
+    "torch",
+    "scikit-image",
+    "trimesh",
+    "numba",
+    "tqdm",
+    "opencv-python",
 ]
 
 [tool.setuptools.packages.find]

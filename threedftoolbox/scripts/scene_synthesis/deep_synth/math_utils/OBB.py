@@ -23,19 +23,26 @@ class OBB(object):
         self._world_to_local = np.identity(4)
         for i in range(3):
             self._world_to_local[i, :3] = self._R[:, i] * (1.0 / self._h[i])
-        t_inv = - np.matmul(self._world_to_local[:3, :3], np.transpose(self._c))
+        t_inv = -np.matmul(self._world_to_local[:3, :3], np.transpose(self._c))
         self._world_to_local[:3, 3] = np.squeeze(t_inv)
 
     @classmethod
     def from_local2world_transform(cls, transform):
         xform = Transform.from_mat4(transform)
-        return cls(center=xform.translation, half_widths=xform.scale, rotation_matrix=xform.rotation.rotation_matrix)
+        return cls(
+            center=xform.translation,
+            half_widths=xform.scale,
+            rotation_matrix=xform.rotation.rotation_matrix,
+        )
 
     @classmethod
     def from_node(cls, node, aligned_dims):
         xform = Transform.from_mat4x4_flat_row_major(node.transform)
-        return cls(center=xform.translation, half_widths=aligned_dims * xform.scale * 0.5,
-                   rotation_matrix=xform.rotation.rotation_matrix)
+        return cls(
+            center=xform.translation,
+            half_widths=aligned_dims * xform.scale * 0.5,
+            rotation_matrix=xform.rotation.rotation_matrix,
+        )
 
     @property
     def half_extents(self):
@@ -70,7 +77,15 @@ class OBB(object):
         return self._local_to_world
 
     def __repr__(self):
-        return 'OBB: {c:' + str(self._c) + ',h:' + str(self._h) + ',R:' + str(self._R.tolist()) + '}'
+        return (
+            "OBB: {c:"
+            + str(self._c)
+            + ",h:"
+            + str(self._h)
+            + ",R:"
+            + str(self._R.tolist())
+            + "}"
+        )
 
     def transform_point(self, p):
         return np.matmul(self._world_to_local, np.append(p, [1], axis=0))[:3]
@@ -96,7 +111,9 @@ class OBB(object):
         d = p - self._c
         closest = np.copy(self._c)
         for i in range(3):
-            closest += np.clip(self._R[:, i] * d, -self._h[i], self._h[i]) * self._R[:, i]
+            closest += (
+                np.clip(self._R[:, i] * d, -self._h[i], self._h[i]) * self._R[:, i]
+            )
         return closest
 
     def sample(self):
@@ -130,7 +147,11 @@ class OBB(object):
         return p_min if abs(p_min) < abs(p_max) else p_max
 
     def to_aabb(self):
-        h_size = abs(self._R[0] * self._h[0]) + abs(self._R[1] * self._h[1]) + abs(self._R[2] * self._h[2])
+        h_size = (
+            abs(self._R[0] * self._h[0])
+            + abs(self._R[1] * self._h[1])
+            + abs(self._R[2] * self._h[2])
+        )
         p_min = self._c - h_size
         p_max = self._c + h_size
         return p_min, p_max

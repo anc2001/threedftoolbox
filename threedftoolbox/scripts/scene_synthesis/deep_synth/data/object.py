@@ -3,6 +3,7 @@ import os
 import numpy as np
 from data import ObjectData
 import utils
+
 # import igl
 """
 Taking care of wavefront obj files
@@ -12,12 +13,16 @@ Call this file once to create a pickled version of the objects
 For faster loading in the future
 """
 
-class Obj():
+
+class Obj:
     """
     Standard vertex-face representation, triangulated
     Order: x, z, y
     """
-    def __init__(self, modelId, houseId=None, from_source=False, is_room=False, mirror=False):
+
+    def __init__(
+        self, modelId, houseId=None, from_source=False, is_room=False, mirror=False
+    ):
         """
         Parameters
         ----------
@@ -28,7 +33,8 @@ class Obj():
             does not apply for rooms
         mirror (bool, optional): If true, loads the mirroed version
         """
-        if is_room: from_source = True  #Don't want to save rooms...
+        if is_room:
+            from_source = True  # Don't want to save rooms...
         data_dir = utils.get_data_root_dir()
         self.vertices = []
         self.faces = []
@@ -37,20 +43,20 @@ class Obj():
                 path = f"{data_dir}/3d_front/room/{houseId}/{modelId}.obj"
             else:
                 path = f"{data_dir}/3d_front/object/{modelId}/{modelId}.obj"
-            with open(path,"r") as f:
+            with open(path, "r") as f:
                 for line in f:
                     data = line.split()
-                    if len(data) > 0:   
+                    if len(data) > 0:
                         if data[0] == "v":
-                            v = np.asarray([float(i) for i in data[1:4]]+[1])
+                            v = np.asarray([float(i) for i in data[1:4]] + [1])
                             self.vertices.append(v)
                         if data[0] == "f":
-                            face = [int(i.split("/")[0])-1 for i in data[1:]]
+                            face = [int(i.split("/")[0]) - 1 for i in data[1:]]
                             if len(face) == 4:
-                                self.faces.append([face[0],face[1],face[2]])
-                                self.faces.append([face[0],face[2],face[3]])
+                                self.faces.append([face[0], face[1], face[2]])
+                                self.faces.append([face[0], face[2], face[3]])
                             elif len(face) == 3:
-                                self.faces.append([face[0],face[1],face[2]])
+                                self.faces.append([face[0], face[1], face[2]])
                             else:
                                 print(f"Found a face with {len(face)} edges!!!")
 
@@ -69,18 +75,14 @@ class Obj():
                 self.vertices = pickle.load(f)
             with open(f"{data_dir}/object/{modelId}/faces.pkl", "rb") as f:
                 self.faces = pickle.load(f)
-        
 
         if mirror:
-            t = np.asarray([[-1, 0, 0, 0], \
-                            [0, 1, 0, 0], \
-                            [0, 0, 1, 0], \
-                            [0, 0, 0, 1]])
+            t = np.asarray([[-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
             self.transform(t)
-            self.modelId = modelId+"_mirror"
+            self.modelId = modelId + "_mirror"
         else:
             self.modelId = modelId
-                
+
     def save(self):
         data_dir = utils.get_data_root_dir()
         dest_dir = f"{data_dir}/object/{self.modelId}"
@@ -90,36 +92,38 @@ class Obj():
             pickle.dump(self.vertices, f, pickle.HIGHEST_PROTOCOL)
         with open(f"{dest_dir}/faces.pkl", "wb") as f:
             pickle.dump(self.faces, f, pickle.HIGHEST_PROTOCOL)
-                
-    
+
     def transform(self, t):
         # print(self.vertices.shape,t.shape)
         # cc()
         self.vertices = np.dot(self.vertices, t)
-    
+
     def get_triangles(self):
         for face in self.faces:
-            yield (self.vertices[face[0]][:3], \
-                   self.vertices[face[1]][:3], \
-                   self.vertices[face[2]][:3],)
-    
+            yield (
+                self.vertices[face[0]][:3],
+                self.vertices[face[1]][:3],
+                self.vertices[face[2]][:3],
+            )
+
     def xmax(self):
-        return np.amax(self.vertices, axis = 0)[0]
+        return np.amax(self.vertices, axis=0)[0]
 
     def xmin(self):
-        return np.amin(self.vertices, axis = 0)[0]
+        return np.amin(self.vertices, axis=0)[0]
 
     def ymax(self):
-        return np.amax(self.vertices, axis = 0)[2]
+        return np.amax(self.vertices, axis=0)[2]
 
     def ymin(self):
-        return np.amin(self.vertices, axis = 0)[2]
+        return np.amin(self.vertices, axis=0)[2]
 
     def zmax(self):
-        return np.amax(self.vertices, axis = 0)[1]
+        return np.amax(self.vertices, axis=0)[1]
 
     def zmin(self):
-        return np.amin(self.vertices, axis = 0)[1]
+        return np.amin(self.vertices, axis=0)[1]
+
 
 def parse_objects():
     """
@@ -129,17 +133,15 @@ def parse_objects():
     obj_dir = data_dir + "/3d_front/object/"
     print("Parsing 3d_front object files...")
     l = len(os.listdir(obj_dir))
-    for (i, modelId) in enumerate(os.listdir(obj_dir)):
+    for i, modelId in enumerate(os.listdir(obj_dir)):
         print(f"{i+1} of {l}...", end="\r")
         if not modelId in ["mgcube", ".DS_Store"]:
-            o = Obj(modelId, from_source = True)
+            o = Obj(modelId, from_source=True)
             o.save()
-            o = Obj(modelId, from_source = True, mirror = True)
+            o = Obj(modelId, from_source=True, mirror=True)
             o.save()
     print()
 
+
 if __name__ == "__main__":
     parse_objects()
-
-
-

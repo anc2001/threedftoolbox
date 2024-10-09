@@ -10,34 +10,32 @@ class Entity:
     """
 
     def __init__(self, instance):
-        self.instance = instance                            # instance object
-        self.type = ''                                      # data type
-        self.bounding_box = BoundingBox()                  # box
-        self.rotate = np.array([0.0, 0.0, 0.0, 1.0])        # [0,0,0,1]
-        self.position = np.array([0.0, 0.0, 0.0])           # [0,0,0
-        self.scale = np.array([1.0, 1.0, 1.0])              # [1,1,1]
-        self.used = True                                    # is used
-        self.clamp_wall = False                             # clamp wall
-        self.clamp_rotate_list = []                         # clamp direction
-        self.children = []                                  # child object
-        self.parent = None                                  # parent object
-        self.modify = False                                 # is transform
-        self.instance_id = 'id'                             # reflect instanceid
-        self.instance_ref = ''                              # reflect uid
-        self.use_gmm = False                                # is gmm
-        self.special_children = []                          # bed and bedstand
+        self.instance = instance  # instance object
+        self.type = ""  # data type
+        self.bounding_box = BoundingBox()  # box
+        self.rotate = np.array([0.0, 0.0, 0.0, 1.0])  # [0,0,0,1]
+        self.position = np.array([0.0, 0.0, 0.0])  # [0,0,0
+        self.scale = np.array([1.0, 1.0, 1.0])  # [1,1,1]
+        self.used = True  # is used
+        self.clamp_wall = False  # clamp wall
+        self.clamp_rotate_list = []  # clamp direction
+        self.children = []  # child object
+        self.parent = None  # parent object
+        self.modify = False  # is transform
+        self.instance_id = "id"  # reflect instanceid
+        self.instance_ref = ""  # reflect uid
+        self.use_gmm = False  # is gmm
+        self.special_children = []  # bed and bedstand
         # self.align_neighbours = []
 
         # 规则摆放
         self.mainObject = False
         self.valid = True
 
-        self.is_sale = False                                # 是否为在售商品
+        self.is_sale = False  # 是否为在售商品
 
     def __repr__(self):
-        return 'Entity %s, {type: %s}' % (
-            self.id, self.type
-        )
+        return "Entity %s, {type: %s}" % (self.id, self.type)
 
     # def add_align_neighbour(self, obj):
     #     self.align_neighbours.append(obj)
@@ -148,7 +146,10 @@ class Entity:
                 rot_matrix = quaternion_to_matrix(quaternion_invert(self.rotate))
                 pos = vector_dot_matrix3(child.position, rot_matrix)
                 pos *= scale
-                pos = vector_dot_matrix3(pos, quaternion_to_matrix(self.rotate)) + self.position
+                pos = (
+                    vector_dot_matrix3(pos, quaternion_to_matrix(self.rotate))
+                    + self.position
+                )
             else:
                 pos = child.position * scale + self.position
 

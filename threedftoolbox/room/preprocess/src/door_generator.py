@@ -5,7 +5,9 @@ from points_aligned_to_floor import PointAlignedToFloor
 
 
 class DoorGenerator(object):
-    def __init__(self, ):
+    def __init__(
+        self,
+    ):
 
         self.room_door_list = []
         self.is_square = False
@@ -19,11 +21,11 @@ class DoorGenerator(object):
 
     def generate_door(self, door_mesh_list, floor_list):
         """generate all doors
-        
+
         Arguments:
             door_mesh_list  -- mesh list
             floor_list  -- floor list
-        
+
         Returns:
             bool -- True or False
         """
@@ -37,13 +39,13 @@ class DoorGenerator(object):
 
         # one mesh one door
         for door_mesh in door_mesh_list:
-            xyz_list = door_mesh['xyz']
+            xyz_list = door_mesh["xyz"]
             y_list = []
             xz_list = []
             for i in range(len(xyz_list) // 3):
                 xz_coordinate = [
                     round(float(xyz_list[3 * i]), 3),
-                    round(float(xyz_list[3 * i + 2]), 3)
+                    round(float(xyz_list[3 * i + 2]), 3),
                 ]
                 y_list.append(float(xyz_list[3 * i + 1]))
                 if xz_coordinate not in xz_list:
@@ -53,8 +55,7 @@ class DoorGenerator(object):
             if len(xz_list) < 4:
                 xz_less_four_points_list.append(xz_list)
             else:
-                self.room_door_list.append(
-                    self.tool.calculate_convexhull(xz_list))
+                self.room_door_list.append(self.tool.calculate_convexhull(xz_list))
 
             # height
             if len(y_list) > 0:
@@ -63,16 +64,23 @@ class DoorGenerator(object):
 
         # input()
         # deduplication
-        self.room_door_list, self.height_list, self.height_limit_list = self.tool.point_deduplication(
-            self.room_door_list, self.height_list, self.height_limit_list)
-        self.room_door_list, self.height_list, self.height_limit_list = self.tool.eight_points_deduplication(
-            self.room_door_list, self.height_list, self.height_limit_list)
+        self.room_door_list, self.height_list, self.height_limit_list = (
+            self.tool.point_deduplication(
+                self.room_door_list, self.height_list, self.height_limit_list
+            )
+        )
+        self.room_door_list, self.height_list, self.height_limit_list = (
+            self.tool.eight_points_deduplication(
+                self.room_door_list, self.height_list, self.height_limit_list
+            )
+        )
 
         align_before_num = len(self.room_door_list)
 
         # the points on the door aligned to the floor
         if self.points_aligned_to_floor.align_point_to_floor(
-                self.room_door_list, floor_list):
+            self.room_door_list, floor_list
+        ):
             self.room_door_list = self.points_aligned_to_floor.new_pts_list
         else:
             self.room_door_list = []
@@ -83,7 +91,7 @@ class DoorGenerator(object):
             return False
 
         if align_after_num < align_before_num:
-            logger.w('door is getting less')
+            logger.w("door is getting less")
 
         new_room_door_list = []
         for room_door in self.room_door_list:
@@ -92,11 +100,18 @@ class DoorGenerator(object):
                 # return False
                 continue
 
-            new_room_door_list.append([
-                room_door[0][0], room_door[0][1], room_door[1][0],
-                room_door[1][1], room_door[2][0], room_door[2][1],
-                room_door[3][0], room_door[3][1]
-            ])
+            new_room_door_list.append(
+                [
+                    room_door[0][0],
+                    room_door[0][1],
+                    room_door[1][0],
+                    room_door[1][1],
+                    room_door[2][0],
+                    room_door[2][1],
+                    room_door[3][0],
+                    room_door[3][1],
+                ]
+            )
 
         self.room_door_list = new_room_door_list
 

@@ -9,14 +9,14 @@ class Mesh:
     """
 
     def __init__(self):
-        self.bounding_box = BoundingBox()      # box
-        self.vertex_array = []                  # vertex
-        self.index_array = []                   # index
-        self.normal = 0                         # normal
-        self.uv = 0                             # texcoord
+        self.bounding_box = BoundingBox()  # box
+        self.vertex_array = []  # vertex
+        self.index_array = []  # index
+        self.normal = 0  # normal
+        self.uv = 0  # texcoord
 
     def __repr__(self):
-        return 'Mesh '
+        return "Mesh "
 
     def set_data(self, vertex_array, index_array):
         """
@@ -26,7 +26,7 @@ class Mesh:
         """
         vertex_count = len(vertex_array)
         index_count = len(index_array)
-        if(vertex_count < 3 or index_count < 3):
+        if vertex_count < 3 or index_count < 3:
             return
 
         self.index_array = np.array(index_array)
@@ -61,7 +61,7 @@ class Mesh:
 
         vertex_count = len(self.vertex_array)
         index_count = len(self.index_array)
-        if (vertex_count < 3 or index_count < 3):
+        if vertex_count < 3 or index_count < 3:
             return
 
         nDim = 3
@@ -74,7 +74,7 @@ class Mesh:
             vertex_y.append(float(self.vertex_array[nDim * int(i) + 1]))
             vertex_z.append(float(self.vertex_array[nDim * int(i) + 2]))
 
-        if (len(vertex_x) < 2):
+        if len(vertex_x) < 2:
             return
 
         self.bounding_box.min[0] = min(vertex_x)

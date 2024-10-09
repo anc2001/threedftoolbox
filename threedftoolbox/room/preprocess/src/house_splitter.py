@@ -3,7 +3,9 @@ from tools import ToolKit
 
 
 class HouseSplitter(object):
-    def __init__(self, ):
+    def __init__(
+        self,
+    ):
 
         self.house_splitted_dict = {}
         self.room_info_list = []
@@ -20,8 +22,8 @@ class HouseSplitter(object):
 
         # single
         # only find entrydoor
-        entry_room = house_info_dict['maindoor'][0]
-        floorplan = house_info_dict['floorplan']
+        entry_room = house_info_dict["maindoor"][0]
+        floorplan = house_info_dict["floorplan"]
 
         # print ('entry_room: ', entry_room)
 
@@ -30,23 +32,22 @@ class HouseSplitter(object):
 
         # find entry-room
         for i, room_info in enumerate(floorplan):
-            if len(room_info['door']) == 0 and len(room_info['hole']) == 0:
+            if len(room_info["door"]) == 0 and len(room_info["hole"]) == 0:
                 self.room_delete_list.append(i)
 
-            if room_info['room'] == entry_room['room']:
-                self.each_room_dict['maindoor'] = [entry_room]
-                self.each_room_dict['floorplan'] = [room_info]
+            if room_info["room"] == entry_room["room"]:
+                self.each_room_dict["maindoor"] = [entry_room]
+                self.each_room_dict["floorplan"] = [room_info]
 
                 self.room_info_list.append(self.each_room_dict)
                 self.room_delete_list.append(i)
 
         # delete entry-room
-        self.rest_room_info_list = self.delete_room(self.room_delete_list,
-                                                    floorplan)
+        self.rest_room_info_list = self.delete_room(self.room_delete_list, floorplan)
         self.room_delete_list = []
 
-        pre_door_list = self.each_room_dict['floorplan'][0]['door']
-        pre_hole_list = self.each_room_dict['floorplan'][0]['hole']
+        pre_door_list = self.each_room_dict["floorplan"][0]["door"]
+        pre_hole_list = self.each_room_dict["floorplan"][0]["hole"]
 
         pre_doorhole_list = []
         if len(pre_door_list) > 0:
@@ -82,14 +83,14 @@ class HouseSplitter(object):
 
         if len(pre_doorhole_list) > 0 and len(self.rest_room_info_list) > 0:
             for i, room_info in enumerate(self.rest_room_info_list):
-                door_list = room_info['door']
-                hole_list = room_info['hole']
+                door_list = room_info["door"]
+                hole_list = room_info["hole"]
 
-                door_height_list = room_info['door_height']
-                door_height_limit_list = room_info['door_height_limit']
+                door_height_list = room_info["door_height"]
+                door_height_limit_list = room_info["door_height_limit"]
 
-                hole_height_list = room_info['hole_height']
-                hole_height_limit_list = room_info['hole_height_limit']
+                hole_height_list = room_info["hole_height"]
+                hole_height_limit_list = room_info["hole_height_limit"]
 
                 # delete door
                 if len(door_list) > 0:
@@ -102,20 +103,20 @@ class HouseSplitter(object):
                                     new_doorhole_list.append(pts)
 
                             maindoor_dict = {}
-                            maindoor_dict['room'] = room_info['room']
-                            maindoor_dict['point'] = door
+                            maindoor_dict["room"] = room_info["room"]
+                            maindoor_dict["point"] = door
 
                             angle, direction = self.tool.compute_door_hole_direction(
-                                door)
-                            maindoor_dict['angle'] = angle
-                            maindoor_dict['direction'] = direction
-                            maindoor_dict['height'] = door_height_list[x]
-                            maindoor_dict[
-                                'height_limit'] = door_height_limit_list[x]
+                                door
+                            )
+                            maindoor_dict["angle"] = angle
+                            maindoor_dict["direction"] = direction
+                            maindoor_dict["height"] = door_height_list[x]
+                            maindoor_dict["height_limit"] = door_height_limit_list[x]
 
                             self.each_room_dict = {}
-                            self.each_room_dict['maindoor'] = [maindoor_dict]
-                            self.each_room_dict['floorplan'] = [room_info]
+                            self.each_room_dict["maindoor"] = [maindoor_dict]
+                            self.each_room_dict["floorplan"] = [room_info]
 
                             self.room_info_list.append(self.each_room_dict)
                             self.room_delete_list.append(i)
@@ -131,37 +132,38 @@ class HouseSplitter(object):
                                     new_doorhole_list.append(pts)
 
                             maindoor_dict = {}
-                            maindoor_dict['room'] = room_info['room']
-                            maindoor_dict['point'] = hole
+                            maindoor_dict["room"] = room_info["room"]
+                            maindoor_dict["point"] = hole
 
                             angle, direction = self.tool.compute_door_hole_direction(
-                                hole)
-                            maindoor_dict['angle'] = angle
-                            maindoor_dict['direction'] = direction
-                            maindoor_dict['height'] = hole_height_list[x]
-                            maindoor_dict[
-                                'height_limit'] = hole_height_limit_list[x]
+                                hole
+                            )
+                            maindoor_dict["angle"] = angle
+                            maindoor_dict["direction"] = direction
+                            maindoor_dict["height"] = hole_height_list[x]
+                            maindoor_dict["height_limit"] = hole_height_limit_list[x]
 
                             self.each_room_dict = {}
-                            self.each_room_dict['maindoor'] = [maindoor_dict]
-                            self.each_room_dict['floorplan'] = [room_info]
+                            self.each_room_dict["maindoor"] = [maindoor_dict]
+                            self.each_room_dict["floorplan"] = [room_info]
 
                             self.room_info_list.append(self.each_room_dict)
                             self.room_delete_list.append(i)
 
         if len(self.room_delete_list) > 0:
             self.rest_room_info_list = self.delete_room(
-                self.room_delete_list, self.rest_room_info_list)
+                self.room_delete_list, self.rest_room_info_list
+            )
 
         return new_doorhole_list
 
     def find_next_room(self, room_info):
         doorhole_info = []
-        if len(room_info['door']) > 0:
-            for door in room_info['door']:
+        if len(room_info["door"]) > 0:
+            for door in room_info["door"]:
                 doorhole_info.append(door)
-        if len(room_info['hole']) > 0:
-            for hole in room_info['hole']:
+        if len(room_info["hole"]) > 0:
+            for hole in room_info["hole"]:
                 doorhole_info.append(hole)
 
         return doorhole_info
@@ -170,8 +172,7 @@ class HouseSplitter(object):
 
         obj_coordnite = [obj_pts[0], obj_pts[1], obj_pts[2], obj_pts[3]]
         for ori_pts in pts_list:
-            if [ori_pts[4], ori_pts[5], ori_pts[6],
-                    ori_pts[7]] == obj_coordnite:
+            if [ori_pts[4], ori_pts[5], ori_pts[6], ori_pts[7]] == obj_coordnite:
                 return True
         return False
 

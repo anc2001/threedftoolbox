@@ -6,11 +6,22 @@ import torch
 
 import _pickle as pickle
 
-class ShouldContinueDataset():
+
+class ShouldContinueDataset:
     """
     Dataset for training/testing the "should continue" network
     """
-    def __init__(self, data_root_dir, data_dir, scene_indices=(0,4000), num_per_epoch=1, complete_prob=0.5, seed=None, ablation=None):
+
+    def __init__(
+        self,
+        data_root_dir,
+        data_dir,
+        scene_indices=(0, 4000),
+        num_per_epoch=1,
+        complete_prob=0.5,
+        seed=None,
+        ablation=None,
+    ):
         """
         Parameters
         ----------
@@ -21,29 +32,29 @@ class ShouldContinueDataset():
         complete_prob (float): probability of sampling the complete scene, as opposed to some incomplete variant of it
         """
         self.data_root_dir = data_root_dir
-        #self.data_dir = data_root_dir + '/' + data_dir
+        # self.data_dir = data_root_dir + '/' + data_dir
         self.data_dir = data_dir
         self.scene_indices = scene_indices
         self.num_per_epoch = num_per_epoch
         self.complete_prob = complete_prob
 
         # Load up the map between SUNCG model IDs and category names
-        #self.category_map = ObjectCategories(data_root_dir + '/suncg_data/ModelCategoryMapping.csv')
+        # self.category_map = ObjectCategories(data_root_dir + '/suncg_data/ModelCategoryMapping.csv')
         # Also load up the list of coarse categories used in this particular dataset
-        #self.categories = self.get_coarse_categories()
+        # self.categories = self.get_coarse_categories()
         # Build a reverse map from category to index
-        #self.cat_to_index = {self.categories[i]:i for i in range(len(self.categories))}
+        # self.cat_to_index = {self.categories[i]:i for i in range(len(self.categories))}
         self.seed = seed
         self.ablation = ablation
 
     def __len__(self):
-        return (self.scene_indices[1]-self.scene_indices[0]) * self.num_per_epoch
+        return (self.scene_indices[1] - self.scene_indices[0]) * self.num_per_epoch
 
     def __getitem__(self, index):
         if self.seed:
             random.seed(self.seed)
 
-        i = int(index+self.scene_indices[0] / self.num_per_epoch)
+        i = int(index + self.scene_indices[0] / self.num_per_epoch)
         scene = RenderedScene(i, self.data_dir, self.data_root_dir)
         # print(i)
         composite = scene.create_composite()
@@ -66,4 +77,4 @@ class ShouldContinueDataset():
         inputs = composite.get_composite(num_extra_channels=0, ablation=self.ablation)
         # Output is a boolean for "should we continue adding objects?"
         output = not is_complete
-        return inputs, torch.tensor(output,dtype=torch.long), existing_categories
+        return inputs, torch.tensor(output, dtype=torch.long), existing_categories

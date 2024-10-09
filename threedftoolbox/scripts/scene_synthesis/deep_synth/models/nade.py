@@ -9,6 +9,8 @@ from torch.distributions import Categorical
 """
 A Discrete NADE, as a torch Distribution object
 """
+
+
 class DiscreteNADEDistribution(Distribution):
 
     def __init__(self, data_size, data_domain_sizes, hidden_size, w, v, c):
@@ -27,7 +29,7 @@ class DiscreteNADEDistribution(Distribution):
         log_probs = []
 
         batch_size = x.size()[0]
-        
+
         # Make this have same batch size as x
         a = self.c
         a = a.unsqueeze(0)
@@ -40,16 +42,16 @@ class DiscreteNADEDistribution(Distribution):
             val = x[:, i]
             lp = dist.log_prob(val)
             log_probs.append(lp.unsqueeze(1))
-            normalized_val = val.float() / self.data_domain_sizes[i]  # Normalize to [0,1]
+            normalized_val = (
+                val.float() / self.data_domain_sizes[i]
+            )  # Normalize to [0,1]
             normalized_val = normalized_val.unsqueeze(1)
             if i < self.data_size - 1:
                 a = self.w[i](normalized_val) + a
 
-
-        log_prob = torch.sum(torch.cat(log_probs, 1), 1)    # First dimension is batch dim
+        log_prob = torch.sum(torch.cat(log_probs, 1), 1)  # First dimension is batch dim
 
         return log_prob
-
 
     def sample(self):
         return self.sample_n(1)
@@ -58,7 +60,7 @@ class DiscreteNADEDistribution(Distribution):
         outputs = []
 
         batch_size = n
-        
+
         # Make this have batch size
         a = self.c
         a = a.unsqueeze(0)
@@ -71,11 +73,13 @@ class DiscreteNADEDistribution(Distribution):
             dist = Categorical(probs)
             val = dist.sample().unsqueeze(1)
             outputs.append(val)
-            normalized_val = val.float() / self.data_domain_sizes[i]  # Normalize to [0,1]
+            normalized_val = (
+                val.float() / self.data_domain_sizes[i]
+            )  # Normalize to [0,1]
             if i < self.data_size - 1:
                 a = self.w[i](normalized_val) + a
 
-        outputs = torch.cat(outputs, 1)                        # First dimension is batch dim
+        outputs = torch.cat(outputs, 1)  # First dimension is batch dim
 
         return outputs
 
@@ -83,6 +87,8 @@ class DiscreteNADEDistribution(Distribution):
 """
 A Discrete NADE, as a nn Module
 """
+
+
 class DiscreteNADEModule(nn.Module):
 
     def __init__(self, data_size, data_domain_sizes, hidden_size):
@@ -111,7 +117,7 @@ class DiscreteNADEModule(nn.Module):
         self.temperature = 1
 
     def reset_parameters(self):
-        stdv = 1. / math.sqrt(self.hidden_size)
+        stdv = 1.0 / math.sqrt(self.hidden_size)
         self.c.data.uniform_(-stdv, stdv)
 
     def set_temperature(self, temp):
@@ -121,19 +127,37 @@ class DiscreteNADEModule(nn.Module):
         return self.log_prob(x)
 
     def log_prob(self, x):
-        nade = DiscreteNADEDistribution(self.data_size, self.data_domain_sizes, self.hidden_size,
-            self.w, self.v, self.c)
+        nade = DiscreteNADEDistribution(
+            self.data_size,
+            self.data_domain_sizes,
+            self.hidden_size,
+            self.w,
+            self.v,
+            self.c,
+        )
         return nade.log_prob(x)
 
     def sample(self):
-        nade = DiscreteNADEDistribution(self.data_size, self.data_domain_sizes, self.hidden_size,
-            self.w, self.v, self.c)
+        nade = DiscreteNADEDistribution(
+            self.data_size,
+            self.data_domain_sizes,
+            self.hidden_size,
+            self.w,
+            self.v,
+            self.c,
+        )
         nade.set_temperature(self.temperature)
         return nade.sample()
 
     def sample_n(self, n):
-        nade = DiscreteNADEDistribution(self.data_size, self.data_domain_sizes, self.hidden_size,
-            self.w, self.v, self.c)
+        nade = DiscreteNADEDistribution(
+            self.data_size,
+            self.data_domain_sizes,
+            self.hidden_size,
+            self.w,
+            self.v,
+            self.c,
+        )
         nade.set_temperature(self.temperature)
         return nade.sample_n(n)
 

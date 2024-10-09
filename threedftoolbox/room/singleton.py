@@ -10,6 +10,7 @@ def Singleton(class_):
 
     def get_instance(*args, **kwargs):
         if class_ not in instance:
-            instance[class_] = class_(*args, ** kwargs)
+            instance[class_] = class_(*args, **kwargs)
         return instance[class_]
+
     return get_instance

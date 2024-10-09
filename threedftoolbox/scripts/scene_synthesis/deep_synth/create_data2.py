@@ -7,6 +7,7 @@ root_dir = get_data_root_dir()
 
 from scene_filter import get_filter, run_filter
 from model_prior import ModelPrior
+
 print("Creating office dataset...")
 filter_description = [("room_type", ["Office"]), ("floor_node",), ("renderable",)]
 run_filter(filter_description, "good", "temp2", 1, 1, 0, 1, 0)

@@ -9,14 +9,17 @@ class BoundingBox:
     """
     bounding box
     """
+
     def __init__(self):
-        self.min = np.array([sys.float_info.max,sys.float_info.max,sys.float_info.max])         # lef bottom corner
-        self.max = np.array([-sys.float_info.max,-sys.float_info.max,-sys.float_info.max])      # right top corner
+        self.min = np.array(
+            [sys.float_info.max, sys.float_info.max, sys.float_info.max]
+        )  # lef bottom corner
+        self.max = np.array(
+            [-sys.float_info.max, -sys.float_info.max, -sys.float_info.max]
+        )  # right top corner
 
     def __repr__(self):
-        return 'BoundingBox, {min: %s, max: %s}' % (
-            self.uid, self.jid
-        )
+        return "BoundingBox, {min: %s, max: %s}" % (self.uid, self.jid)
 
     def get_corner_2d(self):
         """
@@ -69,7 +72,11 @@ class BoundingBox:
         valid
         :return:
         """
-        if self.max[0] < self.min[0] or self.max[1] < self.min[1] or self.max[2] < self.min[2]:
+        if (
+            self.max[0] < self.min[0]
+            or self.max[1] < self.min[1]
+            or self.max[2] < self.min[2]
+        ):
             return False
         return True
 

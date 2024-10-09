@@ -15,17 +15,15 @@ class ToolKit(object):
 
     def is_square(self, points_four):
         """whether the four points of the maindoor can form a rectangle
-        
+
         Arguments:
             points_four {[[x1, y1], [x2, y2], ...]} -- coordinates
-        
+
         Returns:
             bool -- True or False
         """
-        diagonal_length1 = self.compute_distance(points_four[0],
-                                                 points_four[2])
-        diagonal_length2 = self.compute_distance(points_four[1],
-                                                 points_four[3])
+        diagonal_length1 = self.compute_distance(points_four[0], points_four[2])
+        diagonal_length2 = self.compute_distance(points_four[1], points_four[3])
 
         if (diagonal_length1 - diagonal_length2) < self.distance_gap:
             return True
@@ -34,10 +32,10 @@ class ToolKit(object):
 
     def compute_distance(self, pts1, pts2):
         """compute the distance of ywo points
-        
+
         Arguments:
             two_points {[x1, y1], [x2, y2]} -- two points
-        
+
         Returns:
             float -- distance
         """
@@ -47,10 +45,10 @@ class ToolKit(object):
 
     def point_deduplication(self, pts_list, height_list, height_limit_list):
         """point deduplication
-        
+
         Arguments:
             pts_list {list} -- point or single number
-        
+
         Returns:
             list -- deduplocated list
         """
@@ -67,10 +65,10 @@ class ToolKit(object):
 
     def calculate_convexhull(self, coordinate_list):
         """calculate convex hull, use scipy library
-        
+
         Arguments:
             coordinate_list {[[x1, y1],[], ... ]} -- input list
-        
+
         Returns:
             list -- [[x1, y1], [x2, y2], ... ]
         """
@@ -84,14 +82,15 @@ class ToolKit(object):
 
         for index in hull_index:
             hull_point_list.append(
-                [coordinate_list[index][0], coordinate_list[index][1]])
+                [coordinate_list[index][0], coordinate_list[index][1]]
+            )
             # hull_point_list.append(coordinate_list[index][1])
 
         return hull_point_list
 
     def mkdir_files(self, file_path):
         if os.path.exists(file_path):
-            os.system('rm -rf ' + str(file_path))
+            os.system("rm -rf " + str(file_path))
             os.makedirs(file_path)
         else:
             os.makedirs(file_path)
@@ -101,10 +100,10 @@ class ToolKit(object):
 
     def find_once_line(self, line_list):
         """Find the line segment that only appears once
-        
+
         Arguments:
             lines {[[[x1, y1], [x2, y2]], [[], []], ... ]} -- multi line
-        
+
         Returns:
             [[[x1, y1], [x2, y2]], [[], []], ... ] -- line list
         """
@@ -137,10 +136,10 @@ class ToolKit(object):
 
     def line_deduplication(self, line_list):
         """line deduplication
-        
+
         Arguments:
             line_list {[[[x1,y1],[x2,y2]], [[],[]], ... ]} -- input line list
-        
+
         Returns:
             [[[x1,y1],[x2,y2]], [[],[]], ... ] -- output line list
         """
@@ -153,16 +152,15 @@ class ToolKit(object):
 
     def comp_line_angle(self, line):
         """compute line gradient
-        
+
         Arguments:
             line [[x1, y1], [x2, y2]] -- input line
-        
+
         Returns:
             float -- line gradient
         """
 
-        angle = np.rad2deg(
-            np.arctan2(line[1][1] - line[0][1], line[1][0] - line[0][0]))
+        angle = np.rad2deg(np.arctan2(line[1][1] - line[0][1], line[1][0] - line[0][0]))
         # print ('angle: ',angle)
         return angle
 
@@ -178,10 +176,10 @@ class ToolKit(object):
 
     def is_closed(self, line_list):
         """detemine whether line list is closed
-        
+
         Arguments:
-            line_list {[[[],[]], [[],[]], ... ]} -- 
-        
+            line_list {[[[],[]], [[],[]], ... ]} --
+
         Returns:
             [bool] -- [True or False]
         """
@@ -201,10 +199,10 @@ class ToolKit(object):
 
     def merge_line(self, clockwise_line_list):
         """merge line in same direction
-        
+
         Arguments:
             clockwise_line_list  -- line list
-        
+
         Returns:
             line list -- merged line list
         """
@@ -219,24 +217,27 @@ class ToolKit(object):
         # merge
         # 0 -- slice_index[0]
         # if len(slice_index) > 0:
-        merged_line_list.append([
-            clockwise_line_list[0][0],
-            clockwise_line_list[slice_index[0] - 1][1]
-        ])
+        merged_line_list.append(
+            [clockwise_line_list[0][0], clockwise_line_list[slice_index[0] - 1][1]]
+        )
 
         # slice_index
         for i, index in enumerate(slice_index):
             if i > 0:
-                merged_line_list.append([
-                    clockwise_line_list[slice_index[i - 1]][0],
-                    clockwise_line_list[index - 1][1]
-                ])
+                merged_line_list.append(
+                    [
+                        clockwise_line_list[slice_index[i - 1]][0],
+                        clockwise_line_list[index - 1][1],
+                    ]
+                )
 
         # slice_index[-1] -- len(clockwise_line_list)
-        merged_line_list.append([
-            clockwise_line_list[slice_index[-1]][0],
-            clockwise_line_list[len(clockwise_line_list) - 1][1]
-        ])
+        merged_line_list.append(
+            [
+                clockwise_line_list[slice_index[-1]][0],
+                clockwise_line_list[len(clockwise_line_list) - 1][1],
+            ]
+        )
         # print ('merged_line_list: ', merged_line_list)
         return merged_line_list
         # else:
@@ -244,10 +245,10 @@ class ToolKit(object):
 
     def slice_array(self, array_data):
         """sclice array based on continue same element
-        
+
         Arguments:
             array_data {[a, b, c, ... ]} -- a list of number
-        
+
         Returns:
             [a, b, c] -- a list of sliced number
         """
@@ -266,10 +267,10 @@ class ToolKit(object):
 
     def overlap_line_deduplication(self, line_list):
         """deduplicate overlap line
-        
+
         Arguments:
             line_list  -- line list
-        
+
         Returns:
             line list -- deduplicated line list
         """
@@ -282,12 +283,10 @@ class ToolKit(object):
         for i, grad in enumerate(grad_list):
             if i < len(grad_list) - 1:
                 if (grad + grad_list[i + 1]) == 0:
-                    if line_list[i][0] == line_list[
-                            i + 1][1]:  # completely coincident
+                    if line_list[i][0] == line_list[i + 1][1]:  # completely coincident
                         continue
                     else:  # partly coincident
-                        deduplicated_line.append(
-                            [line_list[i][0], line_list[i + 1][1]])
+                        deduplicated_line.append([line_list[i][0], line_list[i + 1][1]])
                 else:
                     deduplicated_line.append(line_list[i])
 
@@ -303,13 +302,14 @@ class ToolKit(object):
         poly = Polygon(poly_list)
         return round(poly.area, 3)
 
-    def eight_points_deduplication(self, eight_points_list, height_list,
-                                   height_limt_list):
+    def eight_points_deduplication(
+        self, eight_points_list, height_list, height_limt_list
+    ):
         """eight points deduplication
-        
+
         Arguments:
             eight_points_list  -- [[x1,y1],[x2,y2],[],...]
-        
+
         Returns:
             [[x1,y1],[x2,y2],...],[],...] -- eight list
         """
@@ -327,12 +327,12 @@ class ToolKit(object):
 
     def is_collinear_three_points(self, pts1, pts2, pts3):
         """determine whether the three points are collinear
-        
+
         Arguments:
             pts1 [x1, y1] -- coordinate
             pts2 [x2, y2] -- ..
             pts3 [x3, y3] -- ..
-        
+
         Returns:
             bool -- True or False
         """
@@ -342,21 +342,30 @@ class ToolKit(object):
         sum = sum1 + sum2 + sum3
 
         is_middle = False
-        if ((min(pts1[0],pts2[0])-self.COLLINEAR_EPSION) <= pts3[0] <= (max(pts1[0],pts2[0])+self.COLLINEAR_EPSION)) and \
-            (min(pts1[1],pts2[1])-self.COLLINEAR_EPSION <= pts3[1] <= max(pts1[1],pts2[1])+self.COLLINEAR_EPSION):
+        if (
+            (min(pts1[0], pts2[0]) - self.COLLINEAR_EPSION)
+            <= pts3[0]
+            <= (max(pts1[0], pts2[0]) + self.COLLINEAR_EPSION)
+        ) and (
+            min(pts1[1], pts2[1]) - self.COLLINEAR_EPSION
+            <= pts3[1]
+            <= max(pts1[1], pts2[1]) + self.COLLINEAR_EPSION
+        ):
             is_middle = True
 
         # compute distance between pts3 and pts1-pts2
         distance = 0.0
         if np.linalg.norm([pts2[0] - pts1[0], pts2[1] - pts1[1]]) != 0:
             distance = np.linalg.norm(
-                np.cross([pts2[0] - pts1[0], pts2[1] - pts1[1]], [
-                    pts1[0] - pts3[0], pts1[1] - pts3[1]
-                ])) / np.linalg.norm([pts2[0] - pts1[0], pts2[1] - pts1[1]])
+                np.cross(
+                    [pts2[0] - pts1[0], pts2[1] - pts1[1]],
+                    [pts1[0] - pts3[0], pts1[1] - pts3[1]],
+                )
+            ) / np.linalg.norm([pts2[0] - pts1[0], pts2[1] - pts1[1]])
         # distance = np.abs(np.cross([pts2[0]-pts1[0], pts2[1]-pts1[1]], [pts1[0]-pts3[0], pts1[1]-pts3[1]]))/np.linalg.norm([pts2[0]-pts1[0], pts2[1]-pts1[1]])
 
         if abs(sum) <= self.COLLINEAR_DIFF and is_middle:
-            return True, 0.
+            return True, 0.0
         else:
             return False, distance
 
@@ -383,7 +392,7 @@ class ToolKit(object):
         return angle, direction
 
     def find_parallel_line(self, line_in_floor, gap):
-        """ compute parallel line, up and down
+        """compute parallel line, up and down
         Returns:
             [[x1, y1], [x2, y2]] -- out floor line list
         """
@@ -400,10 +409,8 @@ class ToolKit(object):
         dx /= dist
         dy /= dist
 
-        parallel_up = [[x1 + gap * dy, y1 - gap * dx],
-                       [x2 + gap * dy, y2 - gap * dx]]
-        parallel_down = [[x1 - gap * dy, y1 + gap * dx],
-                         [x2 - gap * dy, y2 + gap * dx]]
+        parallel_up = [[x1 + gap * dy, y1 - gap * dx], [x2 + gap * dy, y2 - gap * dx]]
+        parallel_down = [[x1 - gap * dy, y1 + gap * dx], [x2 - gap * dy, y2 + gap * dx]]
 
         out_floor_line_list.append(parallel_up)
         out_floor_line_list.append(parallel_down)
@@ -414,18 +421,19 @@ class ToolKit(object):
 
         floor_polygon_list = []
         for i in range(len(floor_info_list) // 2):
-            floor_polygon_list.append((floor_info_list[2 * i],
-                                       floor_info_list[2 * i + 1]))
+            floor_polygon_list.append(
+                (floor_info_list[2 * i], floor_info_list[2 * i + 1])
+            )
 
         return Polygon(floor_polygon_list)
 
     def is_intersec(self, line1, line2):
         """judfe two line is intersection
-        
+
         Arguments:
             line1 {[[x1, y1], [x2, y2]]} -- line1
             line2 {same as line1} -- [description]
-        
+
         Returns:
             boolean -- True or False
         """
@@ -434,12 +442,16 @@ class ToolKit(object):
         p3 = line2[0]
         p4 = line2[1]
 
-        if max(p1[0], p2[0]) >= min(p3[0], p4[0]) and max(p3[0], p4[0]) >= min(
-                p1[0], p2[0]) and max(p1[1], p2[1]) >= min(
-                    p3[1], p4[1]) and max(p3[1], p4[1]) >= min(p1[1], p2[1]):
-            if self.cross(p1, p2, p3) * self.cross(
-                    p1, p2, p4) <= 0 and self.cross(p3, p4, p1) * self.cross(
-                        p3, p4, p2) <= 0:
+        if (
+            max(p1[0], p2[0]) >= min(p3[0], p4[0])
+            and max(p3[0], p4[0]) >= min(p1[0], p2[0])
+            and max(p1[1], p2[1]) >= min(p3[1], p4[1])
+            and max(p3[1], p4[1]) >= min(p1[1], p2[1])
+        ):
+            if (
+                self.cross(p1, p2, p3) * self.cross(p1, p2, p4) <= 0
+                and self.cross(p3, p4, p1) * self.cross(p3, p4, p2) <= 0
+            ):
                 return True
             else:
                 return False
@@ -455,10 +467,12 @@ class ToolKit(object):
         return x1 * y2 - x2 * y1
 
     def is_on_line(self, pts1, pts2, pts3):
-        if (pts3[0] - pts1[0]) * (pts2[1] - pts1[1]) == (pts2[0] - pts1[0]) * (
-                pts3[1] - pts1[1]) and min(pts1[0], pts2[0]) <= pts3[0] <= max(
-                    pts1[0], pts2[0]) and min(
-                        pts1[1], pts2[1]) <= pts3[1] <= max(pts1[1], pts2[1]):
+        if (
+            (pts3[0] - pts1[0]) * (pts2[1] - pts1[1])
+            == (pts2[0] - pts1[0]) * (pts3[1] - pts1[1])
+            and min(pts1[0], pts2[0]) <= pts3[0] <= max(pts1[0], pts2[0])
+            and min(pts1[1], pts2[1]) <= pts3[1] <= max(pts1[1], pts2[1])
+        ):
             return True
         else:
             return False

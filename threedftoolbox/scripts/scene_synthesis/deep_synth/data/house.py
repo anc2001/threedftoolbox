@@ -1,21 +1,32 @@
 """
 Three level House-Level-Node/Room representation of SUNCG
 """
+
 import os
 import json
 import numpy as np
 from data import ObjectData
 import utils
 
-class House():
+
+class House:
     """
     Represents a House
     See SUNCG Toolbox for a detailed description of the structure of the json file
     describing a house
     """
+
     object_data = ObjectData()
-    def __init__(self, index=0, id_=None, house_json=None, file_dir=None,
-                 include_support_information=False, include_arch_information=False):
+
+    def __init__(
+        self,
+        index=0,
+        id_=None,
+        house_json=None,
+        file_dir=None,
+        include_support_information=False,
+        include_arch_information=False,
+    ):
         """
         Get a set of rooms from the house which satisfies a certain criteria
 
@@ -32,7 +43,7 @@ class House():
         include_arch_information (bool): If true, then arch information is loaded from suncg_data/wall
             might not be available, so defaults to False
         """
-        
+
         if house_json is None:
             if file_dir is None:
                 data_dir = utils.get_data_root_dir()
@@ -41,28 +52,40 @@ class House():
                 if id_ is None:
                     houses = dict(enumerate(os.listdir(house_dir)))
                     self.id = houses[index]
-                    self.__dict__ = json.loads(open(house_dir+houses[index]+"/house.json", 'r').read())
+                    self.__dict__ = json.loads(
+                        open(house_dir + houses[index] + "/house.json", "r").read()
+                    )
                 else:
                     self.id = id_
-                    self.__dict__ = json.loads(open(house_dir+id_+"/house.json", 'r').read())
+                    self.__dict__ = json.loads(
+                        open(house_dir + id_ + "/house.json", "r").read()
+                    )
             else:
-                self.__dict__ = json.loads(open(file_dir, 'r').read())
+                self.__dict__ = json.loads(open(file_dir, "r").read())
         else:
             self.__dict__ = house_json
 
         self.filters = []
-        self.levels = [Level(l,self) for l in self.levels]
+        self.levels = [Level(l, self) for l in self.levels]
         self.rooms = [r for l in self.levels for r in l.rooms]
         self.nodes = [n for l in self.levels for n in l.nodes]
         # cc()
-        self.node_dict = {id_: n for l in self.levels for id_,n in l.node_dict.items()}
+        self.node_dict = {id_: n for l in self.levels for id_, n in l.node_dict.items()}
         if include_support_information:
             house_stats_dir = data_dir + "/3d_front/house_relations/"
-            stats = json.loads(open(house_stats_dir+self.id+"/"+self.id+".stats.json", 'r').read())
-            supports = [(s["parent"],s["child"]) for s in stats["relations"]["support"]]
+            stats = json.loads(
+                open(
+                    house_stats_dir + self.id + "/" + self.id + ".stats.json", "r"
+                ).read()
+            )
+            supports = [
+                (s["parent"], s["child"]) for s in stats["relations"]["support"]
+            ]
             for parent, child in supports:
                 if child not in self.node_dict:
-                    print(f'Warning: support relation {supports} involves not present {child} node')
+                    print(
+                        f"Warning: support relation {supports} involves not present {child} node"
+                    )
                     continue
                 if "f" in parent:
                     self.get_node(child).parent = "Floor"
@@ -72,15 +95,21 @@ class House():
                     self.get_node(child).parent = "Wall"
                 else:
                     if parent not in self.node_dict:
-                        print(f'Warning: support relation {supports} involves not present {parent} node')
+                        print(
+                            f"Warning: support relation {supports} involves not present {parent} node"
+                        )
                         continue
                     self.get_node(parent).child.append(self.get_node(child))
                     self.get_node(child).parent = self.get_node(parent)
         if include_arch_information:
-            house_arch_dir = data_dir + '/3d_front/wall/'
-            arch = json.loads(open(house_arch_dir+self.id+'/'+self.id+'.arch.json', 'r').read())
-            self.walls = [w for w in arch['elements'] if w['type'] == 'Wall']
-    
+            house_arch_dir = data_dir + "/3d_front/wall/"
+            arch = json.loads(
+                open(
+                    house_arch_dir + self.id + "/" + self.id + ".arch.json", "r"
+                ).read()
+            )
+            self.walls = [w for w in arch["elements"] if w["type"] == "Wall"]
+
     def get_node(self, id_):
         return self.node_dict[id_]
 
@@ -92,33 +121,35 @@ class House():
         ----------
         filters (list[room_filter]): room_filter is tuple[Room,House] which returns
             if the Room should be included
-        
+
         Returns
         -------
         list[Room]
         """
-        if filters is None: filters = self.filters
-        if not isinstance(filters, list): filters = [filters]
+        if filters is None:
+            filters = self.filters
+        if not isinstance(filters, list):
+            filters = [filters]
         rooms = self.rooms
         for filter_ in filters:
             rooms = [room for room in rooms if filter_(room, self)]
         return rooms
-    
+
     def filter_rooms(self, filters):
         """
         Similar to get_rooms, but overwrites self.node instead of returning a list
         """
         self.rooms = self.get_rooms(filters)
-    
+
     def trim(self):
         """
         Get rid of some intermediate attributes
         """
         nodes = list(self.node_dict.values())
-        if hasattr(self, 'rooms'):
+        if hasattr(self, "rooms"):
             nodes.extend(self.rooms)
         for n in nodes:
-            for attr in ['xform', 'obb', 'frame', 'model2world']:
+            for attr in ["xform", "obb", "frame", "model2world"]:
                 if hasattr(n, attr):
                     delattr(n, attr)
         self.nodes = None
@@ -130,35 +161,50 @@ class House():
         self.filters = None
 
 
-class Level():
+class Level:
     """
     Represents a floor level in the house
     Currently mostly just used to parse the list of nodes and rooms
     Might change in the future
     """
+
     def __init__(self, dict_, house):
         self.__dict__ = dict_
         self.house = house
         invalid_nodes = [n["id"] for n in self.nodes if (not n["valid"]) and "id" in n]
-        self.nodes = [Node(n,self) for n in self.nodes if n["valid"]]
+        self.nodes = [Node(n, self) for n in self.nodes if n["valid"]]
         self.node_dict = {n.id: n for n in self.nodes}
         self.nodes = list(self.node_dict.values())  # deduplicate nodes with same id
-        self.rooms = [Room(n, ([self.node_dict[i] for i in [f"{self.id}_{j}" \
-                      for j in list(set(n.nodeIndices))] if i not in invalid_nodes]), self) \
-                      for n in self.nodes if n.isRoom() and hasattr(n, 'nodeIndices')]
+        self.rooms = [
+            Room(
+                n,
+                (
+                    [
+                        self.node_dict[i]
+                        for i in [f"{self.id}_{j}" for j in list(set(n.nodeIndices))]
+                        if i not in invalid_nodes
+                    ]
+                ),
+                self,
+            )
+            for n in self.nodes
+            if n.isRoom() and hasattr(n, "nodeIndices")
+        ]
 
-class Room():
+
+class Room:
     """
     Represents a room in the house
     """
+
     def __init__(self, room, nodes, level):
         self.__dict__ = room.__dict__
-        #self.room = room
+        # self.room = room
         self.nodes = nodes
-        #self.level = level
+        # self.level = level
         self.filters = []
         self.house_id = level.house.id
-    
+
     def get_nodes(self, filters=None):
         """
         Get a set of nodes from the room which satisfies a certain criteria
@@ -167,52 +213,61 @@ class Room():
         ----------
         filters (list[node_filter]): node_filter is tuple[Node,Room] which returns
             if the Node should be included
-        
+
         Returns
         -------
         list[Node]
         """
-        if filters is None: filters = self.filters
-        if not isinstance(filters, list): filters = [filters]
+        if filters is None:
+            filters = self.filters
+        if not isinstance(filters, list):
+            filters = [filters]
         nodes = self.nodes
         for filter_ in filters:
             nodes = [node for node in nodes if filter_(node, self)]
         return nodes
-    
+
     def filter_nodes(self, filters):
         """
         Similar to get_nodes, but overwrites self.node instead of returning a list
         """
         self.nodes = self.get_nodes(filters)
 
-class Node():
+
+class Node:
     """
     Basic unit of representation of SUNCG
     Usually a room or an object
     Refer to SUNCG toolbox for the possible set of attributes
     """
+
     warning = True
+
     def __init__(self, dict_, level):
         self.__dict__ = dict_
-        #self.level = level
+        # self.level = level
         self.parent = None
         self.child = []
-        if hasattr(self, 'bbox') and 'min' in self.bbox:
+        if hasattr(self, "bbox") and "min" in self.bbox:
             (self.xmin, self.zmin, self.ymin) = self.bbox["min"]
             (self.xmax, self.zmax, self.ymax) = self.bbox["max"]
-            (self.width, self.length) = sorted([self.xmax - self.xmin, self.ymax - self.ymin])
+            (self.width, self.length) = sorted(
+                [self.xmax - self.xmin, self.ymax - self.ymin]
+            )
             self.height = self.zmax - self.zmin
         else:  # warn and populate with default bbox values
             if self.warning:
-                print(f'Warning: node id={self.id} is valid but has no bbox, setting default values')
+                print(
+                    f"Warning: node id={self.id} is valid but has no bbox, setting default values"
+                )
             (self.xmin, self.zmin, self.ymin) = (0, 0, 0)
             (self.xmax, self.zmax, self.ymax) = (0, 0, 0)
-        if hasattr(self, 'transform') and hasattr(self, 'modelId'):
-            t = np.asarray(self.transform).reshape(4,4)
+        if hasattr(self, "transform") and hasattr(self, "modelId"):
+            t = np.asarray(self.transform).reshape(4, 4)
             # print(t)
             # print(self)
             # cc()
-            #Special cases of models with were not aligned in the way we want
+            # Special cases of models with were not aligned in the way we want
             try:
                 alignment_matrix = House.object_data.get_alignment_matrix(self.modelId)
             except:
@@ -220,14 +275,13 @@ class Node():
             if alignment_matrix is not None:
                 t = np.dot(np.linalg.inv(alignment_matrix), t)
                 self.transform = list(t.flatten())
-                
-            #If a reflection is present, switch to the mirrored model
-            #And adjust transform accordingly
+
+            # If a reflection is present, switch to the mirrored model
+            # And adjust transform accordingly
             if np.linalg.det(t) < 0:
-                t_reflec = np.asarray([[-1, 0, 0, 0], \
-                                      [0, 1, 0, 0], \
-                                      [0, 0, 1, 0], \
-                                      [0, 0, 0, 1]])
+                t_reflec = np.asarray(
+                    [[-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+                )
                 t = np.dot(t_reflec, t)
                 self.modelId += "_mirror"
                 self.transform = list(t.flatten())

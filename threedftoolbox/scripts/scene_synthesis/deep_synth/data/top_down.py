@@ -5,14 +5,16 @@ import scipy.misc as m
 from numba import jit
 import torch
 
-class TopDownView():
+
+class TopDownView:
     """
     Take a room, pre-render top-down views
     Of floor, walls and individual objects
     That can be used to generate the multi-channel views used in our pipeline
     """
+
     def __init__(self, height_cap=4.05, length_cap=6.05, size=512):
-        #Padding by 0.05m to avoid problems with boundary cases
+        # Padding by 0.05m to avoid problems with boundary cases
         """
         Parameters
         ----------
@@ -26,36 +28,38 @@ class TopDownView():
         -------
         visualization (Image): a visualization of the rendered room, which is
             simply the superimposition of all the rendered parts
-        (floor, wall, nodes) (Triple[torch.Tensor, torch.Tensor, list[torch.Tensor]): 
+        (floor, wall, nodes) (Triple[torch.Tensor, torch.Tensor, list[torch.Tensor]):
             rendered invidiual parts of the room, as 2D torch tensors
             this is the part used by the pipeline
         """
         self.size = size
-        self.pgen = ProjectionGenerator(room_size_cap=(length_cap, height_cap, length_cap), \
-                                        zpad=0.5, img_size=size)
+        self.pgen = ProjectionGenerator(
+            room_size_cap=(length_cap, height_cap, length_cap), zpad=0.5, img_size=size
+        )
 
     def render(self, room):
-        
+
         projection = self.pgen.get_projection(room)
         # print(projection.t_2d)
-        visualization = np.zeros((self.size,self.size))
+        visualization = np.zeros((self.size, self.size))
         nodes = []
         xx = 1
         import trimesh
-        for node in room.nodes:
-            modelId = node.modelId #Camelcase due to original json
 
-            t = np.asarray(node.transform).reshape(4,4)
+        for node in room.nodes:
+            modelId = node.modelId  # Camelcase due to original json
+
+            t = np.asarray(node.transform).reshape(4, 4)
             # print(dir(node))
             # cc()
             o = Obj(modelId)
-            
+
             # a = trimesh.Trimesh(o.vertices, o.faces)
             # a.export(f'ori{xx}.obj')
             # o.transform(t)
             # a = trimesh.Trimesh(o.vertices, o.faces)
             # a.export(f'trans{xx}.obj')
-            
+
             # cc()
             t = projection.to_2d(t)
             o.transform(t)
@@ -72,20 +76,20 @@ class TopDownView():
             xsize = math.ceil(bbox_max[0]) - xmin + 1
             ysize = math.ceil(bbox_max[2]) - ymin + 1
 
-            print(bbox_min,bbox_max)
+            print(bbox_min, bbox_max)
 
             description = {}
             description["modelId"] = modelId
             description["transform"] = node.transform
             description["bbox_min"] = bbox_min
             description["bbox_max"] = bbox_max
-            
-            #Since it is possible that the bounding box information of a room
-            #Was calculated without some doors/windows
-            #We need to handle these cases
-            if ymin < 0: 
+
+            # Since it is possible that the bounding box information of a room
+            # Was calculated without some doors/windows
+            # We need to handle these cases
+            if ymin < 0:
                 ymin = 0
-            if xmin < 0: 
+            if xmin < 0:
                 xmin = 0
 
             rendered = self.render_object(o, xmin, ymin, xsize, ysize, self.size)
@@ -96,7 +100,7 @@ class TopDownView():
             description["height_map"] = torch.from_numpy(rendered).float()
 
             tmp = self.render_object(o, 0, 0, self.size, self.size, self.size)
-            
+
             # tmp = np.zeros((self.size, self.size))
             # tmp[min(xmin,xmin+xsize):min(xmin,xmin+xsize)+rendered.shape[0],min(ymin,ymin+ysize):min(ymin,ymin+ysize)+rendered.shape[1]] = rendered
             visualization += tmp
@@ -104,25 +108,25 @@ class TopDownView():
             nodes.append(description)
         # cc()
         # cc()
-        #Render the floor
+        # Render the floor
         # print(room.house_id)
         # cc()
-        o = Obj(room.modelId+"f", room.house_id, is_room=True)
+        o = Obj(room.modelId + "f", room.house_id, is_room=True)
         # print(room.modelId,room.house_id)
-        
+
         t = projection.to_2d()
         o.transform(t)
 
         a = trimesh.Trimesh(o.vertices, o.faces)
-        a.export('floor.obj')
+        a.export("floor.obj")
 
         floor = self.render_object(o, 0, 0, self.size, self.size, self.size)
         visualization += floor
         floor = torch.from_numpy(floor).float()
-    
-        #Render the walls
-        o = Obj(room.modelId+"w", room.house_id, is_room=True)
-        
+
+        # Render the walls
+        o = Obj(room.modelId + "w", room.house_id, is_room=True)
+
         t = projection.to_2d()
         o.transform(t)
         # a = trimesh.Trimesh(o.vertices, o.faces)
@@ -131,9 +135,9 @@ class TopDownView():
         wall = self.render_object(o, 0, 0, self.size, self.size, self.size)
         visualization += wall
         wall = torch.from_numpy(wall).float()
-        
+
         return (visualization, (floor, wall, nodes))
-    
+
     @staticmethod
     @jit(nopython=True)
     def render_object_helper(triangles, xmin, ymin, xsize, ysize, img_size):
@@ -141,33 +145,40 @@ class TopDownView():
         N, _, _ = triangles.shape
 
         for triangle in range(N):
-            x0,z0,y0 = triangles[triangle][0]
-            x1,z1,y1 = triangles[triangle][1]
-            x2,z2,y2 = triangles[triangle][2]
-            a = -y1*x2 + y0*(-x1+x2) + x0*(y1-y2) + x1*y2
+            x0, z0, y0 = triangles[triangle][0]
+            x1, z1, y1 = triangles[triangle][1]
+            x2, z2, y2 = triangles[triangle][2]
+            a = -y1 * x2 + y0 * (-x1 + x2) + x0 * (y1 - y2) + x1 * y2
             if a != 0:
-                for i in range(max(0,math.floor(min(x0,x1,x2))), \
-                               min(img_size,math.ceil(max(x0,x1,x2)))):
-                    for j in range(max(0,math.floor(min(y0,y1,y2))), \
-                                   min(img_size,math.ceil(max(y0,y1,y2)))):
-                        x = i+0.5
-                        y = j+0.5
-                        s = (y0*x2 - x0*y2 + (y2-y0)*x + (x0-x2)*y)/a
-                        t = (x0*y1 - y0*x1 + (y0-y1)*x + (x1-x0)*y)/a
+                for i in range(
+                    max(0, math.floor(min(x0, x1, x2))),
+                    min(img_size, math.ceil(max(x0, x1, x2))),
+                ):
+                    for j in range(
+                        max(0, math.floor(min(y0, y1, y2))),
+                        min(img_size, math.ceil(max(y0, y1, y2))),
+                    ):
+                        x = i + 0.5
+                        y = j + 0.5
+                        s = (y0 * x2 - x0 * y2 + (y2 - y0) * x + (x0 - x2) * y) / a
+                        t = (x0 * y1 - y0 * x1 + (y0 - y1) * x + (x1 - x0) * y) / a
                         if s < 0 and t < 0:
                             s = -s
                             t = -t
                         if 0 < s < 1 and 0 < t < 1 and s + t <= 1:
-                            height = z0 *(1-s-t) + z1*s + z2*t
+                            height = z0 * (1 - s - t) + z1 * s + z2 * t
                             result[i][j] = max(result[i][j], height)
-        
-        return result[min(xmin,xmin+xsize):max(xmin,xmin+xsize), min(ymin,ymin+ysize):max(ymin,ymin+ysize)]
-    
+
+        return result[
+            min(xmin, xmin + xsize) : max(xmin, xmin + xsize),
+            min(ymin, ymin + ysize) : max(ymin, ymin + ysize),
+        ]
+
     @staticmethod
     def render_object(o, xmin, ymin, xsize, ysize, img_size):
         """
         Render a cropped top-down view of object
-        
+
         Parameters
         ----------
         o (list[triple]): object to be rendered, represented as a triangle mesh
@@ -177,8 +188,10 @@ class TopDownView():
         img_size (int): size of the full image
         """
         triangles = np.asarray(list(o.get_triangles()), dtype=np.float32)
-        return TopDownView.render_object_helper(triangles, xmin, ymin, xsize, ysize, img_size)
-    
+        return TopDownView.render_object_helper(
+            triangles, xmin, ymin, xsize, ysize, img_size
+        )
+
     @staticmethod
     @jit(nopython=True)
     def render_object_full_size_helper(triangles, size):
@@ -186,26 +199,30 @@ class TopDownView():
         N, _, _ = triangles.shape
 
         for triangle in range(N):
-            x0,z0,y0 = triangles[triangle][0]
-            x1,z1,y1 = triangles[triangle][1]
-            x2,z2,y2 = triangles[triangle][2]
-            a = -y1*x2 + y0*(-x1+x2) + x0*(y1-y2) + x1*y2
+            x0, z0, y0 = triangles[triangle][0]
+            x1, z1, y1 = triangles[triangle][1]
+            x2, z2, y2 = triangles[triangle][2]
+            a = -y1 * x2 + y0 * (-x1 + x2) + x0 * (y1 - y2) + x1 * y2
             if a != 0:
-                for i in range(max(0,math.floor(min(x0,x1,x2))), \
-                               min(size,math.ceil(max(x0,x1,x2)))):
-                    for j in range(max(0,math.floor(min(y0,y1,y2))), \
-                                   min(size,math.ceil(max(y0,y1,y2)))):
-                        x = i+0.5
-                        y = j+0.5
-                        s = (y0*x2 - x0*y2 + (y2-y0)*x + (x0-x2)*y)/a
-                        t = (x0*y1 - y0*x1 + (y0-y1)*x + (x1-x0)*y)/a
+                for i in range(
+                    max(0, math.floor(min(x0, x1, x2))),
+                    min(size, math.ceil(max(x0, x1, x2))),
+                ):
+                    for j in range(
+                        max(0, math.floor(min(y0, y1, y2))),
+                        min(size, math.ceil(max(y0, y1, y2))),
+                    ):
+                        x = i + 0.5
+                        y = j + 0.5
+                        s = (y0 * x2 - x0 * y2 + (y2 - y0) * x + (x0 - x2) * y) / a
+                        t = (x0 * y1 - y0 * x1 + (y0 - y1) * x + (x1 - x0) * y) / a
                         if s < 0 and t < 0:
                             s = -s
                             t = -t
                         if 0 < s < 1 and 0 < t < 1 and s + t <= 1:
-                            height = z0 *(1-s-t) + z1*s + z2*t
+                            height = z0 * (1 - s - t) + z1 * s + z2 * t
                             result[i][j] = max(result[i][j], height)
-        
+
         return result
 
     @staticmethod

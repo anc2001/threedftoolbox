@@ -5,6 +5,8 @@ import torch.utils.model_zoo as model_zoo
 Simple fully connected layers
 Used to combine resnet features with category counts
 """
+
+
 class FullyConnected(nn.Module):
 
     def __init__(self, num_in, num_out):
@@ -17,7 +19,7 @@ class FullyConnected(nn.Module):
             nn.Linear(2048, 1024),
             nn.BatchNorm1d(1024),
             nn.ReLU(inplace=True),
-            nn.Linear(1024, num_out)
+            nn.Linear(1024, num_out),
         )
 
     def forward(self, x):

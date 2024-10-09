@@ -4,7 +4,8 @@ Make sure to read README
 IMPORTANT: make sure you don't have a directory named `temp`
 under SCENESYNTH_ROOT_PATH, since that will be removed relentlessly
 """
-#Didn't implement any checkpoints, comment out parts as you wish...
+
+# Didn't implement any checkpoints, comment out parts as you wish...
 import shutil
 from utils import get_data_root_dir
 from data.object import parse_objects
@@ -22,11 +23,6 @@ root_dir = get_data_root_dir()
 # filter_description = [("good_house",)]
 # run_filter(filter_description, "main", "good", 1, 1, 0, 1, 0)
 # print()
-
-
-
-
-
 
 
 print("Creating bedroom dataset...")

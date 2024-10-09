@@ -10,18 +10,16 @@ from threedftoolbox.room.mesh import Mesh
 
 class Instance:
     def __init__(self, uid):
-        self.uid = uid                          # unique id
-        self.jid = ''                           # object id
-        self.aid = []                           
-        self.type = ''                          # Floor or Window or ...
-        self.bounding_box = BoundingBox()      # bbox
-        self.mesh = 0                           # is Mesh object, juran-json 'mesh' info
-        self.ref = 0                            # reference count
+        self.uid = uid  # unique id
+        self.jid = ""  # object id
+        self.aid = []
+        self.type = ""  # Floor or Window or ...
+        self.bounding_box = BoundingBox()  # bbox
+        self.mesh = 0  # is Mesh object, juran-json 'mesh' info
+        self.ref = 0  # reference count
 
     def __repr__(self):
-        return 'Instance %s, {jid:%s}' % (
-            self.uid, self.jid
-        )
+        return "Instance %s, {jid:%s}" % (self.uid, self.jid)
 
     def clone(self):
         """
@@ -38,4 +36,3 @@ class Instance:
         instance.mesh = self.mesh
         instance.ref = self.ref
         return instance
-

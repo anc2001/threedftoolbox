@@ -8,7 +8,9 @@ from tools import ToolKit
 
 
 class BaywindowGenerator(object):
-    def __init__(self, ):
+    def __init__(
+        self,
+    ):
         self.tool = ToolKit()
         self.baywindow_list = []
         self.baywindow_height = []
@@ -25,12 +27,12 @@ class BaywindowGenerator(object):
         y_list = []
         xz_single_list = []
         for baywindow_mesh in baywindow_mesh_list:
-            baywindow_xyz = baywindow_mesh['xyz']
+            baywindow_xyz = baywindow_mesh["xyz"]
 
             for i in range(len(baywindow_xyz) // 3):
                 xz_coordinate = [
                     float(baywindow_xyz[3 * i]),
-                    float(baywindow_xyz[3 * i + 2])
+                    float(baywindow_xyz[3 * i + 2]),
                 ]
                 y_coorinate = float(baywindow_xyz[3 * i + 1])
                 if xz_coordinate not in xz_list:
@@ -52,17 +54,20 @@ class BaywindowGenerator(object):
         floor_polygon_line = []
         for i in range(len(floor_list)):
             floor_polygon_line.append(
-                [(floor_list[i][0][0], floor_list[i][0][1]),
-                 (floor_list[i][1][0], floor_list[i][1][1])])
+                [
+                    (floor_list[i][0][0], floor_list[i][0][1]),
+                    (floor_list[i][1][0], floor_list[i][1][1]),
+                ]
+            )
 
-        line_in_floor_list = self.find_line_in_floor(xz_polygon_list,
-                                                     floor_polygon_line)
+        line_in_floor_list = self.find_line_in_floor(
+            xz_polygon_list, floor_polygon_line
+        )
 
         floor_polygon_list = []
         for floor_line in floor_list:
             floor_polygon_list.append((floor_line[0]))
-        floor_polygon_list = Polygon(
-            self.tool.list_to_tuple(floor_polygon_list))
+        floor_polygon_list = Polygon(self.tool.list_to_tuple(floor_polygon_list))
 
         # region_difference = xz_polygon_list.difference(floor_polygon_list)
 
@@ -76,13 +81,16 @@ class BaywindowGenerator(object):
             out_floor_line_list_05 = []
 
             out_floor_line_list_05, dis_two_list = self.generate_out_floor_line(
-                gap, line_in_floor, floor_polygon_list)
+                gap, line_in_floor, floor_polygon_list
+            )
 
             line_out_floor_list.append(
-                out_floor_line_list_05[dis_two_list.index(max(dis_two_list))])
+                out_floor_line_list_05[dis_two_list.index(max(dis_two_list))]
+            )
 
-        self.baywindow_list = self.clockwise_baywindow(line_in_floor_list,
-                                                       line_out_floor_list)
+        self.baywindow_list = self.clockwise_baywindow(
+            line_in_floor_list, line_out_floor_list
+        )
 
         if len(self.baywindow_list) > 0:
             return True
@@ -96,10 +104,14 @@ class BaywindowGenerator(object):
             baywindow = []
 
             # anticlockwise
-            baywindow_convexhull = self.tool.calculate_convexhull([
-                line_in_floor[0], line_in_floor[1], line_out_floor_list[i][0],
-                line_out_floor_list[i][1]
-            ])
+            baywindow_convexhull = self.tool.calculate_convexhull(
+                [
+                    line_in_floor[0],
+                    line_in_floor[1],
+                    line_out_floor_list[i][0],
+                    line_out_floor_list[i][1],
+                ]
+            )
 
             index = []
             for in_floor_pts in line_in_floor:
@@ -109,31 +121,47 @@ class BaywindowGenerator(object):
 
             if index == [0, 1] or index == [1, 0]:
                 baywindow = [
-                    baywindow_convexhull[1][0], baywindow_convexhull[1][1],
-                    baywindow_convexhull[0][0], baywindow_convexhull[0][1],
-                    baywindow_convexhull[3][0], baywindow_convexhull[3][1],
-                    baywindow_convexhull[2][0], baywindow_convexhull[2][1]
+                    baywindow_convexhull[1][0],
+                    baywindow_convexhull[1][1],
+                    baywindow_convexhull[0][0],
+                    baywindow_convexhull[0][1],
+                    baywindow_convexhull[3][0],
+                    baywindow_convexhull[3][1],
+                    baywindow_convexhull[2][0],
+                    baywindow_convexhull[2][1],
                 ]
             if index == [1, 2] or index == [2, 1]:
                 baywindow = [
-                    baywindow_convexhull[2][0], baywindow_convexhull[2][1],
-                    baywindow_convexhull[1][0], baywindow_convexhull[1][1],
-                    baywindow_convexhull[0][0], baywindow_convexhull[0][1],
-                    baywindow_convexhull[3][0], baywindow_convexhull[3][1]
+                    baywindow_convexhull[2][0],
+                    baywindow_convexhull[2][1],
+                    baywindow_convexhull[1][0],
+                    baywindow_convexhull[1][1],
+                    baywindow_convexhull[0][0],
+                    baywindow_convexhull[0][1],
+                    baywindow_convexhull[3][0],
+                    baywindow_convexhull[3][1],
                 ]
             if index == [2, 3] or index == [3, 2]:
                 baywindow = [
-                    baywindow_convexhull[3][0], baywindow_convexhull[3][1],
-                    baywindow_convexhull[2][0], baywindow_convexhull[2][1],
-                    baywindow_convexhull[1][0], baywindow_convexhull[1][1],
-                    baywindow_convexhull[0][0], baywindow_convexhull[0][1]
+                    baywindow_convexhull[3][0],
+                    baywindow_convexhull[3][1],
+                    baywindow_convexhull[2][0],
+                    baywindow_convexhull[2][1],
+                    baywindow_convexhull[1][0],
+                    baywindow_convexhull[1][1],
+                    baywindow_convexhull[0][0],
+                    baywindow_convexhull[0][1],
                 ]
             if index == [0, 3] or index == [3, 0]:
                 baywindow = [
-                    baywindow_convexhull[0][0], baywindow_convexhull[0][1],
-                    baywindow_convexhull[3][0], baywindow_convexhull[3][1],
-                    baywindow_convexhull[2][0], baywindow_convexhull[2][1],
-                    baywindow_convexhull[1][0], baywindow_convexhull[1][1]
+                    baywindow_convexhull[0][0],
+                    baywindow_convexhull[0][1],
+                    baywindow_convexhull[3][0],
+                    baywindow_convexhull[3][1],
+                    baywindow_convexhull[2][0],
+                    baywindow_convexhull[2][1],
+                    baywindow_convexhull[1][0],
+                    baywindow_convexhull[1][1],
                 ]
 
             baywindow_list.append(baywindow)
@@ -151,8 +179,7 @@ class BaywindowGenerator(object):
                 if floor_polygon_list.contains(Point(point)):
                     dis_pt_poly = 0
                     continue
-                dis_pt_poly = self.is_in_polygon(
-                    Point(point), floor_polygon_list)
+                dis_pt_poly = self.is_in_polygon(Point(point), floor_polygon_list)
                 dis_list.append(dis_pt_poly)
             dis_two_list.append(sum(dis_list))
 
@@ -164,8 +191,7 @@ class BaywindowGenerator(object):
 
     def find_difference_polygon(self, region_difference):
 
-        coordinates_region_difference = mapping(
-            region_difference)['coordinates']
+        coordinates_region_difference = mapping(region_difference)["coordinates"]
         region_dimension = np.ndim(coordinates_region_difference)
 
         difference_polygon_list = []
@@ -194,7 +220,7 @@ class BaywindowGenerator(object):
             ips = xz_polygon_list.intersection(line)
 
             if not ips.is_empty:
-                res = mapping(ips)['coordinates']
+                res = mapping(ips)["coordinates"]
                 if np.array(res).size == 4:
                     line_in_floor_list.append(res)
         return line_in_floor_list
