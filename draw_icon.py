@@ -899,9 +899,9 @@ def fit_circle(binary_map, furniture_threshold=0.90, circle_threshold=0.98):
         return False, None, None
 
 
-def parse_furniture(model_info, reparse=True, dump=True):
+def parse_furniture(model_info, threedfuture_dir, reparse=True, dump=True):
     modelid = model_info["model_id"]
-    info_path = f"{threedfuture_dir}/{modelid}/icon_info.pkl"
+    info_path = threedfuture_dir / modelid / "icon_info.pkl"
 
     if not reparse:
         if os.path.exists(info_path):
@@ -914,7 +914,7 @@ def parse_furniture(model_info, reparse=True, dump=True):
     modelid = model_info["model_id"]
 
     try:
-        meshfile = f"{threedfuture_dir}/{modelid}/raw_model.obj"
+        meshfile = threedfuture_dir / modelid / "raw_model.obj"
         mesh = trimesh.load(meshfile)
     except Exception as e:
         print(e)

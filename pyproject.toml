@@ -9,7 +9,7 @@ description = "Toolbox for 3D-FRONT dataset"
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
-    "numpy>=1.2.0",
+    "numpy>=1.20.0",
     "scipy",
     "libigl",
     "shapely",
@@ -19,6 +19,7 @@ dependencies = [
     "numba",
     "tqdm",
     "opencv-python",
+    "mapbox-earcut",
 ]
 
 [tool.setuptools.packages.find]

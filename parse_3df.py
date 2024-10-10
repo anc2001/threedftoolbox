@@ -1,5 +1,6 @@
 import json
 import sys
+import pymesh
 from collections import defaultdict
 import utils
 import numpy as np
@@ -13,7 +14,6 @@ from scipy import ndimage
 from PIL import Image, ImageDraw
 import random
 import trimesh
-import pymesh
 from shapely.geometry import Polygon
 import threedftoolbox.scripts.utils as threedfutils
 from threedftoolbox.scripts.scene import Instance, Furniture
@@ -787,20 +787,19 @@ def combine_objs(objs):
 def parse_room(
     house_path,
     threedfuture_dir,
+    output_path,
+    room_type=None,
     save_obj=False,
     save_separate_obj=False,
     save_png=True,
     save_wall_vis=False,
     dir_separator="/",
     save_final=True,
-    final_dir="render/3dffinal",
 ):
-    with open(room_path, "r") as f:
+    with open(house_path, "r") as f:
         house = json.load(f)
 
     house_name = house_path.stem
-    if save_final:
-        utils.ensuredir(f"{final_dir}/{house_name}")
 
     furniture_in_scene = defaultdict()
     for furniture in house["furniture"]:
@@ -824,10 +823,14 @@ def parse_room(
 
     all_meshes = []
 
-    for room in house["scene"]["room"]:
+    for room in tqdm(house["scene"]["room"]):
         room_id = room["instanceid"]
-        if dir_separator == "/":
-            utils.ensuredir(f"parse_debug/{house_name}")
+        if room_type is not None and room_type not in room_id.lower():
+            continue
+        room_dir = output_path / f"{house_name}_{room_id}"
+        room_debug_dir = room_dir / "debug"
+        room_dir.mkdir(exist_ok=True)
+        room_debug_dir.mkdir(exist_ok=True)
 
         count = 0
         all_furnitures = []
@@ -846,7 +849,7 @@ def parse_room(
                     utils.writeObj(
                         verts,
                         faces + 1,
-                        f"parse_debug/{house_name}{dir_separator}{count}_{mesh_type}.obj",
+                        room_debug_dir / f"{count}_{mesh_type}.obj",
                     )
                 count += 1
             else:
@@ -875,12 +878,12 @@ def parse_room(
             utils.writeObj(
                 floor_vs_original,
                 floor_fs + 1,
-                f"parse_debug/{house_name}{dir_separator}all_floor.obj",
+                room_debug_dir / "all_floor.obj",
             )
             utils.writeObj(
                 wall_vs_original,
                 wall_fs + 1,
-                f"parse_debug/{house_name}{dir_separator}all_wall.obj",
+                room_debug_dir / "all_wall.obj",
             )
 
         y0 = wall_vs_original.min(axis=0)[1]
@@ -988,7 +991,7 @@ def parse_room(
                 images_combined = np.hstack(vis)
                 images_combined = Image.fromarray(images_combined)
                 images_combined.save(
-                    f"parse_debug/{house_name}{dir_separator}walls{method}.png"
+                    room_debug_dir / f"walls{method}.png"
                 )
 
             # print(thick_dirs, len(loop_vs), len(loop_vs_outer), len(thick_dirs))
@@ -1014,7 +1017,7 @@ def parse_room(
                 utils.writeObj(
                     vroom,
                     froom + 1,
-                    f"parse_debug/{room_name}{dir_separator}procedural_wall{method}.obj",
+                    room_debug_dir / f"procedural_wall{method}.obj",
                 )
 
             if save_png:
@@ -1034,7 +1037,7 @@ def parse_room(
                         child["scale"],
                     )
                     modelid = finstance.info.jid
-                    meshfile = str(threedfuture_dir + "/" + modelid + "/raw_model.obj")
+                    meshfile = str(threedfuture_dir / modelid  / "raw_model.obj")
                     m = trimesh.load(meshfile)
                     all_furnitures.append((m, finstance))
                     # print(finstance.info.category, finstance.rot)
@@ -1086,8 +1089,10 @@ def parse_room(
                 if save_png:
                     model_info = model_info_dict[modelid]
                     category = model_info["category"]
+                    import pdb
+                    pdb.set_trace()
                     circle, rectangles, bbox, depth_img, contour_vis = (
-                        draw_icon.parse_furniture(model_info, reparse=False)
+                        draw_icon.parse_furniture(model_info, threedfuture_dir, reparse=True)
                     )
                     # print(bbox)
                     img = draw_icon.draw_and_transform(
@@ -1109,7 +1114,7 @@ def parse_room(
 
             if save_png:
                 floor_plan.save(
-                    f"parse_debug/{house_name}{dir_separator}floorplan{method}.png"
+                    room_debug_dir / f"floorplan{method}.png"
                 )
 
             do_intersections = True
@@ -1159,7 +1164,7 @@ def parse_room(
 
             if save_final:
                 wall_mtl = "newmtl Wall \nKa 0.100000 0.100000 0.100000 \nKd 0.840000 0.840000 0.840000 \nKs 0.500000 0.500000 0.500000 \nNs 96.078431 \nNi 1.000000 \nd 1.000000 \nillum 1"
-                with open(f"{final_dir}/{house_name}/room.mtl", "w") as f:
+                with open(room_dir / "room.mtl", "w") as f:
                     f.write(wall_mtl)
 
                 save_obj_with_face_normals(
@@ -1167,7 +1172,7 @@ def parse_room(
                     froom,
                     "room.mtl",
                     "Wall",
-                    f"{final_dir}/{house_name}/room.obj",
+                    room_dir / "room.obj",
                 )
                 all_objs = []
 
@@ -1177,7 +1182,7 @@ def parse_room(
                     transform = all_transform[i]
                     all_objs.append([modelid, transform])
 
-                with open(f"{final_dir}/{house_name}/mts_info.pkl", "wb") as f:
+                with open(room_dir / "mts_info.pkl", "wb") as f:
                     pickle.dump(all_objs, f, 2)
 
                 all_infos = {}
@@ -1191,7 +1196,7 @@ def parse_room(
                 all_infos["doors"] = doors
                 all_infos["windows"] = windows
 
-                with open(f"{final_dir}/{house_name}/all_info.pkl", "wb") as f:
+                with open(room_dir / "all_info.pkl", "wb") as f:
                     pickle.dump(all_infos, f, 2)
 
 
@@ -1212,6 +1217,17 @@ if __name__ == "__main__":
         type=Path,
         help="path to model_info.json",
     )
+    parser.add_argument(
+        "--output-path",
+        type=Path,
+        help="output path of parsing",
+    )
+    parser.add_argument(
+        "--room-type",
+        type=str,
+        help="room type to filter",
+        default=None,
+    )
     args = parser.parse_args()
 
     model_info = json.load(open(args.model_info_path, "r", encoding="utf-8"))
@@ -1219,12 +1235,15 @@ if __name__ == "__main__":
     for model in model_info:
         model_info_dict[model["model_id"]] = model
 
-    for room_path in tqdm(args.threedf_dir.glob("*")):
+    args.output_path.mkdir(exist_ok = True, parents = True)
+    house_paths = list(args.threedf_dir.glob("*"))
+    for house_path in tqdm(house_paths):
         parse_room(
-            room_path,
+            house_path,
             args.threedfuture_dir,
+            args.output_path,
+            room_type=args.room_type,
             save_obj=True,
             save_separate_obj=False,
             save_png=True,
-            dir_separator="/",
         )
