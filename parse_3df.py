@@ -6,7 +6,6 @@ import utils
 import numpy as np
 import math
 from functools import reduce
-from render_depth_wall import render_mesh_vc
 from PIL import Image
 from pathlib import Path
 from tqdm import tqdm
@@ -15,10 +14,10 @@ from PIL import Image, ImageDraw
 import random
 import trimesh
 from shapely.geometry import Polygon
+from threedftoolbox.render.render_depth_wall import render_mesh_vc
 import threedftoolbox.scripts.utils as threedfutils
 from threedftoolbox.scripts.scene import Instance, Furniture
 import pickle
-import draw_icon
 
 import argparse
 
@@ -791,10 +790,9 @@ def parse_room(
     room_type=None,
     save_obj=False,
     save_separate_obj=False,
-    save_png=True,
     save_wall_vis=False,
-    dir_separator="/",
     save_final=True,
+    parse_wall=True,
 ):
     with open(house_path, "r") as f:
         house = json.load(f)
@@ -813,7 +811,6 @@ def parse_room(
                 furniture["bbox"] if "bbox" in furniture else None,
             )
             furniture_in_scene[furniture["uid"]] = f
-            # scene.add_furniture(f)
 
     # Parse the extra meshes of the scene e.g walls, doors,
     # windows etc.
@@ -822,18 +819,21 @@ def parse_room(
         meshes_in_scene[mm["uid"]] = mm
 
     all_meshes = []
-
-    for room in tqdm(house["scene"]["room"]):
+    for room in house["scene"]["room"]:
         room_id = room["instanceid"]
         if room_type is not None and room_type not in room_id.lower():
             continue
         room_dir = output_path / f"{house_name}_{room_id}"
+
+        if (room_dir / "all_info.pkl").exists():
+            continue
+
         room_debug_dir = room_dir / "debug"
         room_dir.mkdir(exist_ok=True)
-        room_debug_dir.mkdir(exist_ok=True)
+        if save_separate_obj or save_obj: 
+            room_debug_dir.mkdir(exist_ok=True)
 
         count = 0
-        all_furnitures = []
         for child in room["children"]:
             ref = child["ref"]
             if ref in furniture_in_scene:
@@ -855,349 +855,287 @@ def parse_room(
             else:
                 continue
 
+        floor_meshes = [m for m in all_meshes if m[2] == "Floor"]
+        if len(floor_meshes) == 0:
+            continue
         floor_vs_original, floor_fs = merge_repeated_vertices(
-            *combine_objs([m for m in all_meshes if m[2] == "Floor"])
+            *combine_objs(floor_meshes)
         )
-        outline = get_poly_outline(floor_vs_original, floor_fs)
-        outline_original = ensure_clockwise(floor_vs_original, outline)
-        outline_simplfied = simplify_poly_outline(floor_vs_original, outline_original)
-        wall_vs_original, wall_fs = merge_repeated_vertices(
-            *combine_objs(
-                [
-                    m
-                    for m in all_meshes
-                    if not any(
-                        a in m[2]
-                        for a in ["Floor", "Door", "Pocket", "Ceiling", "Window"]
-                    )
-                ]
-            )
-        )
-        wall_vs_original = wall_vs_original.astype(float)
         if save_obj:
             utils.writeObj(
                 floor_vs_original,
                 floor_fs + 1,
                 room_debug_dir / "all_floor.obj",
             )
-            utils.writeObj(
-                wall_vs_original,
-                wall_fs + 1,
-                room_debug_dir / "all_wall.obj",
-            )
 
-        y0 = wall_vs_original.min(axis=0)[1]
-        y1 = wall_vs_original.max(axis=0)[1]
-        sample_interval = 6 / 512  # corresponds to the floorplan vis
-
-        # for method, outline in [('_original', outline_original), ('_simplified', outline_simplfied)]:
-        for method, outline in [("", outline_simplfied)]:
-            wall_imgs = []
-            doors = []
-            windows = []
-            loop_vs, loop_vs_outer, thick_dirs = get_double_loop(
-                floor_vs_original, outline
-            )
-
-            loop_vs_min = loop_vs.min(axis=0)
-            loop_vs_max = loop_vs.max(axis=0)
-            loop_vs -= (loop_vs_min + loop_vs_max) / 2
-            loop_vs_outer -= (loop_vs_min + loop_vs_max) / 2
-
-            xshift_room, yshift_room = (loop_vs_min + loop_vs_max) / 2
-            vertex_offset = np.asarray([xshift_room, 0, yshift_room])
-            floor_vs = floor_vs_original - vertex_offset
-            wall_vs = wall_vs_original - vertex_offset
-
-            for wall_num, (u, v) in enumerate(outline):
-                x0, _, z0 = floor_vs[u]
-                x1, _, z1 = floor_vs[v]
-
-                front_dir = np.array((z0 - z1, 0, x1 - x0), dtype=np.float64)
-                front_dir /= np.linalg.norm(front_dir)
-                up_dir = np.array((0, 1, 0), dtype=np.float64)
-
-                right_dir = np.cross(front_dir, up_dir)
-                up_dir = np.cross(right_dir, front_dir)
-
-                transform = np.array(
-                    (
-                        (right_dir[0], front_dir[0], up_dir[0], 0),
-                        (right_dir[1], front_dir[1], up_dir[1], 0),
-                        (right_dir[2], front_dir[2], up_dir[2], 0),
-                        (0, 0, 0, 1),
-                    ),
-                    dtype=np.float64,
-                )
-
-                bounds = np.array(
+        if not parse_wall:
+            vertex_offset = np.zeros(3)
+        else:
+            outline = get_poly_outline(floor_vs_original, floor_fs)
+            outline_original = ensure_clockwise(floor_vs_original, outline)
+            outline_simplfied = simplify_poly_outline(floor_vs_original, outline_original)
+            wall_vs_original, wall_fs = merge_repeated_vertices(
+                *combine_objs(
                     [
-                        [x0, y0, z0, 1],
-                        [x1, y1, z1, 1],
-                    ],
-                    dtype=np.float64,
+                        m
+                        for m in all_meshes
+                        if not any(
+                            a in m[2]
+                            for a in ["Floor", "Door", "Pocket", "Ceiling", "Window"]
+                        )
+                    ]
                 )
-
-                bounds = np.dot(bounds, transform)
-                z_buffer = render_mesh_vc(
-                    wall_vs,
-                    wall_fs,
-                    bbox=bounds,
-                    img_size=None,
-                    use_texture=False,
-                    transform=transform,
-                    scale=512 / 6,
-                    wall_d_threshold=0.1,
-                )
-                z_buffer = np.abs(z_buffer)
-                z_buffer[z_buffer > 1] = 1
-                z_buffer = 1 - z_buffer
-                zero_regions = find_largest_zero_rectangles(np.copy(z_buffer))
-
-                z_buffer = z_buffer * 255
-                if save_wall_vis:
-                    wall_rgb = np.stack((z_buffer, z_buffer, z_buffer), axis=2).astype(
-                        "uint8"
-                    )
-                # print("==================")
-                for zero_region in zero_regions:
-                    xx0, yy0, xx1, yy1 = zero_region
-                    region_type, region_start, region_end = classify_region(
-                        zero_region, floor_vs[u], floor_vs[v], z_buffer.shape
-                    )
-                    # for xx0, yy0, xx1, yy1 in zero_regions:
-                    if region_type == "window":
-                        if save_wall_vis:
-                            wall_rgb[xx0:xx1, yy0:yy1, 2] = 128
-                        windows.append((wall_num, region_start, region_end))
-                    elif region_type == "door":
-                        if save_wall_vis:
-                            wall_rgb[xx0:xx1, yy0:yy1, 1] = 128
-                        doors.append((wall_num, region_start, region_end))
-                    else:
-                        pass
-                        # wall_rgb[xx0:xx1, yy0:yy1,0] = 128
-                if save_wall_vis:
-                    wall_imgs.append(wall_rgb)
-
-            if save_wall_vis:
-                line = np.zeros((wall_imgs[0].shape[0], 5, 3)).astype("uint8")
-                line[:, :, 0] = 255
-                vis = []
-                for img in wall_imgs:
-                    vis.append(line)
-                    vis.append(img)
-                vis.append(line)
-                images_combined = np.hstack(vis)
-                images_combined = Image.fromarray(images_combined)
-                images_combined.save(
-                    room_debug_dir / f"walls{method}.png"
-                )
-
-            # print(thick_dirs, len(loop_vs), len(loop_vs_outer), len(thick_dirs))
-            walls = get_walls(loop_vs, loop_vs_outer, thick_dirs, doors, windows)
-            floor_mesh = create_floor_mesh(loop_vs_outer)
-            all_vs = [floor_mesh.vertices]
-            all_fs = [floor_mesh.faces]
-            offset = floor_mesh.vertices.shape[0]
-            # all_vs = []
-            # all_fs = []
-            # offset = 0
-            # for i, (vs, fs) in enumerate(walls[0:1]):
-            for i, (vs, fs) in enumerate(walls):
-                # utils.writeObj(vs,fs+1,f'{outdir}/{d.uid}/wall_{i}.obj')
-                all_vs.append(vs)
-                fs = fs + offset
-                all_fs.append(fs)
-                offset += vs.shape[0]
-
-            vroom = np.concatenate(all_vs, axis=0)
-            froom = np.concatenate(all_fs, axis=0)
+            )
+            wall_vs_original = wall_vs_original.astype(float)
             if save_obj:
                 utils.writeObj(
-                    vroom,
-                    froom + 1,
-                    room_debug_dir / f"procedural_wall{method}.obj",
+                    wall_vs_original,
+                    wall_fs + 1,
+                    room_debug_dir / "all_wall.obj",
                 )
 
-            if save_png:
-                floor_plan = draw_walls_2D(
-                    loop_vs, loop_vs_outer, thick_dirs, doors, windows
-                )
-                furniture_icons = []
+            y0 = wall_vs_original.min(axis=0)[1]
+            y1 = wall_vs_original.max(axis=0)[1]
+            sample_interval = 6 / 512  # corresponds to the floorplan vis
 
-            all_furnitures = []
-            for child in room["children"]:
-                ref = child["ref"]
-                if ref in furniture_in_scene:
-                    finstance = Instance(
-                        furniture_in_scene[ref],
-                        child["pos"] - vertex_offset,
-                        child["rot"],
-                        child["scale"],
+            for method, outline in [("", outline_simplfied)]:
+                wall_imgs = []
+                doors = []
+                windows = []
+                loop_vs, loop_vs_outer, thick_dirs = get_double_loop(
+                    floor_vs_original, outline
+                )
+
+                loop_vs_min = loop_vs.min(axis=0)
+                loop_vs_max = loop_vs.max(axis=0)
+                loop_vs -= (loop_vs_min + loop_vs_max) / 2
+                loop_vs_outer -= (loop_vs_min + loop_vs_max) / 2
+
+                xshift_room, yshift_room = (loop_vs_min + loop_vs_max) / 2
+                vertex_offset = np.asarray([xshift_room, 0, yshift_room])
+                floor_vs = floor_vs_original - vertex_offset
+                wall_vs = wall_vs_original - vertex_offset
+
+                for wall_num, (u, v) in enumerate(outline):
+                    x0, _, z0 = floor_vs[u]
+                    x1, _, z1 = floor_vs[v]
+
+                    front_dir = np.array((z0 - z1, 0, x1 - x0), dtype=np.float64)
+                    front_dir /= np.linalg.norm(front_dir)
+                    up_dir = np.array((0, 1, 0), dtype=np.float64)
+
+                    right_dir = np.cross(front_dir, up_dir)
+                    up_dir = np.cross(right_dir, front_dir)
+
+                    transform = np.array(
+                        (
+                            (right_dir[0], front_dir[0], up_dir[0], 0),
+                            (right_dir[1], front_dir[1], up_dir[1], 0),
+                            (right_dir[2], front_dir[2], up_dir[2], 0),
+                            (0, 0, 0, 1),
+                        ),
+                        dtype=np.float64,
                     )
-                    modelid = finstance.info.jid
-                    meshfile = str(threedfuture_dir / modelid  / "raw_model.obj")
-                    m = trimesh.load(meshfile)
-                    all_furnitures.append((m, finstance))
-                    # print(finstance.info.category, finstance.rot)
 
-            all_transform = []
-            for m, finstance in all_furnitures:
-                # rotation_m = np.asarray(rotation_m)
+                    bounds = np.array(
+                        [
+                            [x0, y0, z0, 1],
+                            [x1, y1, z1, 1],
+                        ],
+                        dtype=np.float64,
+                    )
+
+                    bounds = np.dot(bounds, transform)
+                    z_buffer = render_mesh_vc(
+                        wall_vs,
+                        wall_fs,
+                        bbox=bounds,
+                        img_size=None,
+                        use_texture=False,
+                        transform=transform,
+                        scale=512 / 6,
+                        wall_d_threshold=0.1,
+                    )
+                    z_buffer = np.abs(z_buffer)
+                    z_buffer[z_buffer > 1] = 1
+                    z_buffer = 1 - z_buffer
+                    zero_regions = find_largest_zero_rectangles(np.copy(z_buffer))
+
+                    z_buffer = z_buffer * 255
+                    if save_wall_vis:
+                        wall_rgb = np.stack((z_buffer, z_buffer, z_buffer), axis=2).astype(
+                            "uint8"
+                        )
+                    for zero_region in zero_regions:
+                        xx0, yy0, xx1, yy1 = zero_region
+                        region_type, region_start, region_end = classify_region(
+                            zero_region, floor_vs[u], floor_vs[v], z_buffer.shape
+                        )
+                        if region_type == "window":
+                            if save_wall_vis:
+                                wall_rgb[xx0:xx1, yy0:yy1, 2] = 128
+                            windows.append((wall_num, region_start, region_end))
+                        elif region_type == "door":
+                            if save_wall_vis:
+                                wall_rgb[xx0:xx1, yy0:yy1, 1] = 128
+                            doors.append((wall_num, region_start, region_end))
+                        else:
+                            pass
+                    if save_wall_vis:
+                        wall_imgs.append(wall_rgb)
+
+                if save_wall_vis:
+                    line = np.zeros((wall_imgs[0].shape[0], 5, 3)).astype("uint8")
+                    line[:, :, 0] = 255
+                    vis = []
+                    for img in wall_imgs:
+                        vis.append(line)
+                        vis.append(img)
+                    vis.append(line)
+                    images_combined = np.hstack(vis)
+                    images_combined = Image.fromarray(images_combined)
+                    images_combined.save(
+                        room_debug_dir / f"walls{method}.png"
+                    )
+
+                walls = get_walls(loop_vs, loop_vs_outer, thick_dirs, doors, windows)
+                floor_mesh = create_floor_mesh(loop_vs_outer)
+                all_vs = [floor_mesh.vertices]
+                all_fs = [floor_mesh.faces]
+                offset = floor_mesh.vertices.shape[0]
+                for i, (vs, fs) in enumerate(walls):
+                    all_vs.append(vs)
+                    fs = fs + offset
+                    all_fs.append(fs)
+                    offset += vs.shape[0]
+
+                vroom = np.concatenate(all_vs, axis=0)
+                froom = np.concatenate(all_fs, axis=0)
+                if save_obj:
+                    utils.writeObj(
+                        vroom,
+                        froom + 1,
+                        room_debug_dir / f"procedural_wall{method}.obj",
+                    )
+
+        all_furnitures = []
+        for child in room["children"]:
+            ref = child["ref"]
+            if ref in furniture_in_scene:
+                finstance = Instance(
+                    furniture_in_scene[ref],
+                    child["pos"] - vertex_offset,
+                    child["rot"],
+                    child["scale"],
+                )
                 modelid = finstance.info.jid
+                meshfile = str(threedfuture_dir / modelid  / "raw_model.obj")
+                m = trimesh.load(meshfile, force='mesh')
+                all_furnitures.append((m, finstance))
 
-                rotation_m = np.array(threedfutils.quaternion_to_matrix(finstance.rot))
-                # print(rotation_m)
-                affine_rot = np.zeros((4, 4))
-                affine_rot[:3, :3] = np.transpose(
-                    rotation_m
-                )  # not sure why but for now
-                affine_rot[3, 3] = 1
+        all_transform = []
+        for m, finstance in all_furnitures:
+            modelid = finstance.info.jid
 
-                affine_scale = np.asarray(
-                    [
-                        [finstance.scale[0], 0, 0, 0],
-                        [0, finstance.scale[1], 0, 0],
-                        [0, 0, finstance.scale[2], 0],
-                        [0, 0, 0, 1],
-                    ]
-                )
+            rotation_m = np.array(threedfutils.quaternion_to_matrix(finstance.rot))
+            affine_rot = np.zeros((4, 4))
+            affine_rot[:3, :3] = np.transpose(
+                rotation_m
+            )  # not sure why but for now
+            affine_rot[3, 3] = 1
 
-                affine_translation = np.asarray(
-                    [
-                        [1, 0, 0, 0],
-                        [0, 1, 0, 0],
-                        [0, 0, 1, 0],
-                        [finstance.pos[0], finstance.pos[1], finstance.pos[2], 1],
-                    ]
-                )
+            affine_scale = np.asarray(
+                [
+                    [finstance.scale[0], 0, 0, 0],
+                    [0, finstance.scale[1], 0, 0],
+                    [0, 0, finstance.scale[2], 0],
+                    [0, 0, 0, 1],
+                ]
+            )
 
-                affine = affine_rot @ affine_scale @ affine_translation
-                all_transform.append(affine)
+            affine_translation = np.asarray(
+                [
+                    [1, 0, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 0, 1, 0],
+                    [finstance.pos[0], finstance.pos[1], finstance.pos[2], 1],
+                ]
+            )
 
-                # with open(f"render/3df2023/{room_name}/test_scene.pkl", 'rb') as f:
-                #    all_objs = pickle.load(f)
+            affine = affine_rot @ affine_scale @ affine_translation
+            all_transform.append(affine)
 
-                # print("=============")
-                # print(finstance.info.category)
-                # for modelid2, transform in all_objs:
-                #    if modelid2 == modelid:
-                #        print(transform)
-                # print(affine)
-                # input()
-                if save_png:
-                    model_info = model_info_dict[modelid]
-                    category = model_info["category"]
-                    import pdb
-                    pdb.set_trace()
-                    circle, rectangles, bbox, depth_img, contour_vis = (
-                        draw_icon.parse_furniture(model_info, threedfuture_dir, reparse=True)
-                    )
-                    # print(bbox)
-                    img = draw_icon.draw_and_transform(
-                        circle,
-                        rectangles,
-                        category,
-                        obj_bbox=bbox[:4],
-                        instance=finstance,
-                    )
-                    # img.show()
-                    # input()
-                    # print("===========================")
-                    # img2 = draw_rectangle_transformed(m.vertices, finstance, loop_vs)
-                    # img.show()
-                    # img2.show()
-                    # input()
-                    furniture_icons.append(img)
-                    floor_plan = blend_images(floor_plan, img)
+        do_intersections = True
+        if do_intersections:
+            transformed_meshes = []
+            collisions = []
 
-            if save_png:
-                floor_plan.save(
-                    room_debug_dir / f"floorplan{method}.png"
-                )
+            for i in range(len(all_furnitures)):
+                m = all_furnitures[i][0]
+                transform = all_transform[i]
+                v = m.vertices
+                v = np.concatenate((v, np.ones((v.shape[0], 1))), axis=1)
+                v = np.dot(v, transform)[:, :3]
 
-            do_intersections = True
-            if do_intersections:
-                transformed_meshes = []
-                # volumes = []
-                collisions = []
+                m2 = trimesh.Trimesh(vertices=v, faces=m.faces)
 
-                for i in range(len(all_furnitures)):
-                    m = all_furnitures[i][0]
-                    transform = all_transform[i]
-                    v = m.vertices
-                    v = np.concatenate((v, np.ones((v.shape[0], 1))), axis=1)
-                    v = np.dot(v, transform)[:, :3]
+                m.vertices = v
 
-                    m2 = trimesh.Trimesh(vertices=v, faces=m.faces)
+                transformed_meshes.append(m)
 
-                    m.vertices = v
+            for i in range(len(transformed_meshes)):
+                for j in range(i + 1, len(transformed_meshes)):
+                    mesh1 = transformed_meshes[i]
+                    mesh2 = transformed_meshes[j]
 
-                    transformed_meshes.append(m)
-                    # volumes.append(m.volume)
+                    collision_manager = trimesh.collision.CollisionManager()
+                    collision_manager.add_object("mesh1", mesh1)
+                    collision_manager.add_object("mesh2", mesh2)
+                    collision = collision_manager.in_collision_internal()
 
-                # scene = trimesh.Scene()
-                # for m in transformed_meshes:
-                #    scene.add_geometry(m)
+                    if collision:
+                        collisions.append((i, j))
+                        collisions.append((j, i))  # lazy
+        else:
+            collisions = []
 
-                # fm = trimesh.Trimesh(vertices=vroom, faces=froom)
-                # scene.add_geometry(fm)
-                # scene.show()
-                # input()
+        if save_obj:
+            wall_mtl = "newmtl Wall \nKa 0.100000 0.100000 0.100000 \nKd 0.840000 0.840000 0.840000 \nKs 0.500000 0.500000 0.500000 \nNs 96.078431 \nNi 1.000000 \nd 1.000000 \nillum 1"
+            with open(room_dir / "room.mtl", "w") as f:
+                f.write(wall_mtl)
 
-                for i in range(len(transformed_meshes)):
-                    for j in range(i + 1, len(transformed_meshes)):
-                        mesh1 = transformed_meshes[i]
-                        mesh2 = transformed_meshes[j]
+            save_obj_with_face_normals(
+                vroom,
+                froom,
+                "room.mtl",
+                "Wall",
+                room_dir / "room.obj",
+            )
 
-                        collision_manager = trimesh.collision.CollisionManager()
-                        collision_manager.add_object("mesh1", mesh1)
-                        collision_manager.add_object("mesh2", mesh2)
-                        collision = collision_manager.in_collision_internal()
+        all_objs = []
+        for i in range(len(all_furnitures)):
+            m, finstance = all_furnitures[i]
+            modelid = finstance.info.jid
+            transform = all_transform[i]
+            all_objs.append([modelid, transform])
 
-                        if collision:
-                            collisions.append((i, j))
-                            collisions.append((j, i))  # lazy
-            else:
-                collisions = []
+        all_infos = {}
+        all_infos["floor_verts"] = floor_vs_original
+        all_infos["floor_fs"] = floor_fs 
+        all_infos["vertex_offset"] = vertex_offset
+        all_infos["all_objs"] = all_objs
+        all_infos["furnitures"] = [fur[1] for fur in all_furnitures]
+        all_infos["collisions"] = collisions
+        all_infos["id"] = room_id
+        if parse_wall:
+            all_infos["loop_vs"] = loop_vs
+            all_infos["loop_vs_outer"] = loop_vs_outer
+            all_infos["thick_dirs"] = thick_dirs
+            all_infos["doors"] = doors
+            all_infos["windows"] = windows
 
-            if save_final:
-                wall_mtl = "newmtl Wall \nKa 0.100000 0.100000 0.100000 \nKd 0.840000 0.840000 0.840000 \nKs 0.500000 0.500000 0.500000 \nNs 96.078431 \nNi 1.000000 \nd 1.000000 \nillum 1"
-                with open(room_dir / "room.mtl", "w") as f:
-                    f.write(wall_mtl)
-
-                save_obj_with_face_normals(
-                    vroom,
-                    froom,
-                    "room.mtl",
-                    "Wall",
-                    room_dir / "room.obj",
-                )
-                all_objs = []
-
-                for i in range(len(all_furnitures)):
-                    m, finstance = all_furnitures[i]
-                    modelid = finstance.info.jid
-                    transform = all_transform[i]
-                    all_objs.append([modelid, transform])
-
-                with open(room_dir / "mts_info.pkl", "wb") as f:
-                    pickle.dump(all_objs, f, 2)
-
-                all_infos = {}
-                all_infos["loop_vs"] = loop_vs
-                all_infos["loop_vs_outer"] = loop_vs_outer
-                all_infos["thick_dirs"] = thick_dirs
-                all_infos["vertex_offset"] = vertex_offset
-                all_infos["all_objs"] = all_objs
-                all_infos["furnitures"] = [fur[1] for fur in all_furnitures]
-                all_infos["collisions"] = collisions
-                all_infos["doors"] = doors
-                all_infos["windows"] = windows
-
-                with open(room_dir / "all_info.pkl", "wb") as f:
-                    pickle.dump(all_infos, f, 2)
+        with open(room_dir / "all_info.pkl", "wb") as f:
+            pickle.dump(all_infos, f, 2)
 
 
 if __name__ == "__main__":
@@ -1228,6 +1166,10 @@ if __name__ == "__main__":
         help="room type to filter",
         default=None,
     )
+    parser.add_argument("--save-obj", action="store_true")
+    parser.add_argument("--save-separate-obj", action="store_true")
+    parser.add_argument("--save-wall-vis", action="store_true")
+    parser.add_argument("--parse-wall", action="store_true")
     args = parser.parse_args()
 
     model_info = json.load(open(args.model_info_path, "r", encoding="utf-8"))
@@ -1243,7 +1185,8 @@ if __name__ == "__main__":
             args.threedfuture_dir,
             args.output_path,
             room_type=args.room_type,
-            save_obj=True,
-            save_separate_obj=False,
-            save_png=True,
+            save_obj=args.save_obj,
+            save_separate_obj=args.save_separate_obj,
+            save_wall_vis=args.save_wall_vis,
+            parse_wall=args.parse_wall,
         )

@@ -20,6 +20,7 @@ dependencies = [
     "tqdm",
     "opencv-python",
     "mapbox-earcut",
+    "python-fcl",
 ]
 
 [tool.setuptools.packages.find]
