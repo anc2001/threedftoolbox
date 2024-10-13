@@ -1,7 +1,6 @@
 import json
 import sys
 from collections import defaultdict
-import utils
 import numpy as np
 import math
 from functools import reduce
