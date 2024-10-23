@@ -10,17 +10,15 @@ readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
     "numpy>=1.20.0",
-    "scipy",
+    "trimesh",
     "libigl",
+    "scipy",
     "shapely",
-    "torch",
-    "scikit-image",
     "trimesh",
     "numba",
     "tqdm",
-    "opencv-python",
-    "mapbox-earcut",
-    "python-fcl",
+    "pillow",
+    "pyyaml",
 ]
 
 [tool.setuptools.packages.find]
