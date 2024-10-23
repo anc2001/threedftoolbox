@@ -1,0 +1,8 @@
+bedroom:
+  largest_allowed_dim: 6.2
+
+living_room:
+  largest_allowed_dim: None
+
+library:
+  largest_allowed_dim: None

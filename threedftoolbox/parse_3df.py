@@ -1,5 +1,6 @@
 import json
 import sys
+import yaml
 from collections import defaultdict
 import numpy as np
 import math
@@ -16,6 +17,7 @@ from threedftoolbox.render.render_depth_wall import render_mesh_vc
 import threedftoolbox.scripts.utils as threedfutils
 from threedftoolbox.scripts.scene import Instance, Furniture
 import pickle
+from scipy.spatial.transform import Rotation
 
 import argparse
 
@@ -90,11 +92,15 @@ def combine_objs(objs):
     return verts, faces
 
 def parse_room(
+    unique_scene_ids,
     house_path,
     threedfuture_dir,
     output_path,
     room_type=None,
     do_intersections=True,
+    invalid_scene_ids = [],
+    invalid_jids = [],
+    largest_allowed_dim = None
 ):
     with open(house_path, "r") as f:
         house = json.load(f)
@@ -103,7 +109,7 @@ def parse_room(
 
     furniture_in_scene = defaultdict()
     for furniture in house["furniture"]:
-        if "valid" in furniture and furniture["valid"]:
+        if "valid" in furniture and furniture["valid"] and furniture["jid"] not in invalid_jids:
             f = Furniture(
                 furniture["uid"],
                 furniture["jid"],
@@ -123,18 +129,22 @@ def parse_room(
     all_meshes = []
     for room in house["scene"]["room"]:
         room_id = room["instanceid"]
+
         if room_type is not None and room_type not in room_id.lower():
             continue
-        room_dir = output_path / f"{house_name}_{room_id}"
 
-        if (room_dir / "all_info.pkl").exists():
+        if room_id in unique_scene_ids:
             continue
 
         count = 0
         for child in room["children"]:
             ref = child["ref"]
             if ref in furniture_in_scene:
-                pass
+                # If scale is very small/big ignore this scene
+                if any(si < 1e-5 for si in child["scale"]):
+                    return
+                if any(si > 5 for si in child["scale"]):
+                    return
             elif ref in meshes_in_scene:
                 mesh_data = meshes_in_scene[ref]
                 verts = np.asarray(mesh_data["xyz"]).reshape(-1, 3)
@@ -152,6 +162,9 @@ def parse_room(
         floor_vs_original, floor_fs = merge_repeated_vertices(
             *combine_objs(floor_meshes)
         )
+        floor_min_bound = np.amin(floor_vs_original, axis = 0)
+        floor_max_bound = np.amax(floor_vs_original, axis = 0)
+        floor_centroid = np.mean([floor_min_bound, floor_max_bound], axis = 0)
 
         all_furnitures = []
         for child in room["children"]:
@@ -159,7 +172,7 @@ def parse_room(
             if ref in furniture_in_scene:
                 finstance = Instance(
                     furniture_in_scene[ref],
-                    child["pos"] - vertex_offset,
+                    child["pos"],
                     child["rot"],
                     child["scale"],
                 )
@@ -168,116 +181,107 @@ def parse_room(
                 m = trimesh.load(meshfile, force='mesh')
                 all_furnitures.append((m, finstance))
 
-        all_transform = []
+        bboxes = []
         for m, finstance in all_furnitures:
-            modelid = finstance.info.jid
+            object_verts = np.array(m.vertices)
+            object_verts *= finstance.scale 
+            object_min_bound = np.amin(object_verts, axis = 0)
+            object_max_bound = np.amax(object_verts, axis = 0)
+            extent = (object_max_bound - object_min_bound) / 2
 
-            rotation_m = np.array(threedfutils.quaternion_to_matrix(finstance.rot))
-            affine_rot = np.zeros((4, 4))
-            affine_rot[:3, :3] = np.transpose(
-                rotation_m
-            )  # not sure why but for now
-            affine_rot[3, 3] = 1
+            rotvec = Rotation.from_quat(finstance.rot).as_rotvec() 
+            theta = rotvec[1]
+            R = np.zeros((3, 3))
+            R[0 ,0] = np.cos(theta)
+            R[0, 2] = -np.sin(theta)
+            R[2, 0] = np.sin(theta)
+            R[2, 2] = np.cos(theta)
+            R[1, 1] = 1
+            object_verts = object_verts.dot(R) + finstance.pos - floor_centroid
+            object_min_bound = np.amin(object_verts, axis = 0)
+            object_max_bound = np.amax(object_verts, axis = 0)
+            center = np.mean([object_min_bound, object_max_bound], axis = 0)
 
-            affine_scale = np.asarray(
-                [
-                    [finstance.scale[0], 0, 0, 0],
-                    [0, finstance.scale[1], 0, 0],
-                    [0, 0, finstance.scale[2], 0],
-                    [0, 0, 0, 1],
-                ]
-            )
-
-            affine_translation = np.asarray(
-                [
-                    [1, 0, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 0, 1, 0],
-                    [finstance.pos[0], finstance.pos[1], finstance.pos[2], 1],
-                ]
-            )
-
-            affine = affine_rot @ affine_scale @ affine_translation
-            all_transform.append(affine)
-
-        if do_intersections:
-            transformed_meshes = []
-            collisions = []
-
-            for i in range(len(all_furnitures)):
-                m = all_furnitures[i][0]
-                transform = all_transform[i]
-                v = m.vertices
-                v = np.concatenate((v, np.ones((v.shape[0], 1))), axis=1)
-                v = np.dot(v, transform)[:, :3]
-
-                m2 = trimesh.Trimesh(vertices=v, faces=m.faces)
-
-                m.vertices = v
-
-                transformed_meshes.append(m)
-
-            for i in range(len(transformed_meshes)):
-                for j in range(i + 1, len(transformed_meshes)):
-                    mesh1 = transformed_meshes[i]
-                    mesh2 = transformed_meshes[j]
-
-                    collision_manager = trimesh.collision.CollisionManager()
-                    collision_manager.add_object("mesh1", mesh1)
-                    collision_manager.add_object("mesh2", mesh2)
-                    collision = collision_manager.in_collision_internal()
-
-                    if collision:
-                        collisions.append((i, j))
-                        collisions.append((j, i))  # lazy
-        else:
-            collisions = []
-
-        all_objs = []
-        for i in range(len(all_furnitures)):
-            m, finstance = all_furnitures[i]
-            modelid = finstance.info.jid
-            transform = all_transform[i]
-            all_objs.append([modelid, transform])
+            bbox = {
+                "rotation" : rotvec[1:2],
+                "size" : extent,
+                "translation" : center
+            }
+            bboxes.append(bbox)
 
         all_infos = {}
-        all_infos["floor_verts"] = floor_vs_original
-        all_infos["floor_fs"] = floor_fs 
-        all_infos["all_objs"] = all_objs
-        all_infos["furnitures"] = [fur[1] for fur in all_furnitures]
-        all_infos["collisions"] = collisions
-        all_infos["id"] = room_id
+        all_infos["floor_verts"] = floor_vs_original - floor_centroid
+        if largest_allowed_dim:
+            scene_min_bound = np.amin(all_infos["floor_verts"], axis = 0)
+            scene_max_bound = np.amax(all_infos["floor_verts"], axis = 0)
+            scene_extent = scene_max_bound - scene_min_bound
+            if scene_extent[0] > largest_allowed_dim or scene_extent[2] > largest_allowed_dim:
+                return
 
+        all_infos["floor_fs"] = floor_fs 
+        if len(all_furnitures) == 0:
+            return
+
+        all_infos["furnitures"] = [fur[1] for fur in all_furnitures]
+        all_infos["bboxes"] = bboxes
+        all_infos["scene_id"] = room_id
+
+        room_dir = output_path / f"{house_name}_{room_id}"
+        room_dir.mkdir(exist_ok = True)
         with open(room_dir / "all_info.pkl", "wb") as f:
             pickle.dump(all_infos, f, 2)
 
+        unique_scene_ids.append(room_id)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--threedf-dir",
         type=Path,
+        required=True,
         help="path to 3D-FRONT dataset",
     )
     parser.add_argument(
         "--threedfuture-dir",
         type=Path,
+        required=True,
         help="path to 3D-FUTURE model directory",
     )
     parser.add_argument(
         "--model-info-path",
         type=Path,
+        required=True,
         help="path to model_info.json",
     )
     parser.add_argument(
         "--output-path",
         type=Path,
+        required=True,
         help="output path of parsing",
+    )
+    parser.add_argument(
+        "--bounds-file",
+        type=Path,
+        help="option to specify largest allowed scene size, room-type must be specified",
+        default=None
     )
     parser.add_argument(
         "--room-type",
         type=str,
+        required=True,
         help="room type to filter",
+        default=None,
+    )
+    parser.add_argument(
+        "--invalid-jids",
+        type=str,
+        help="text file of black list of invalid houses",
+        default=None,
+    )
+    parser.add_argument(
+        "--invalid-scene-ids",
+        type=str,
+        help="text file of invalid rooms",
         default=None,
     )
     args = parser.parse_args()
@@ -287,12 +291,42 @@ if __name__ == "__main__":
     for model in model_info:
         model_info_dict[model["model_id"]] = model
 
+    if args.invalid_jids:
+        with open(args.invalid_jids, 'rb') as f:
+            invalid_jids = set(l.strip() for l in f)
+    else:
+        invalid_jids = []
+
+    if args.invalid_scene_ids:
+        with open(args.invalid_scene_ids, 'rb') as f:
+            invalid_scene_ids = set(l.strip() for l in f)
+    else:
+        invalid_scene_ids = []
+
+    if args.bounds_file:
+        with open(args.bounds_file, 'rb') as f:
+            bounds_config = yaml.safe_load(f)
+        if not args.room_type:
+            raise ValueError(f"room type should be specified to specify largest allowed scene size")
+        largest_allowed_dim = bounds_config[args.room_type]['largest_allowed_dim']
+    else:
+        largest_allowed_dim = None
+
     args.output_path.mkdir(exist_ok = True, parents = True)
     house_paths = list(args.threedf_dir.glob("*"))
+    unique_scene_ids = []
     for house_path in tqdm(house_paths):
         parse_room(
+            unique_scene_ids,
             house_path,
             args.threedfuture_dir,
             args.output_path,
             room_type=args.room_type,
+            invalid_scene_ids = invalid_scene_ids,
+            invalid_jids = invalid_jids,
+            largest_allowed_dim = largest_allowed_dim,
         )
+
+    with open(args.output_path / 'scene_ids.txt', 'wb') as f:
+        for scene_id in unique_scene_ids:
+            f.write(f'{scene_id}\n')
