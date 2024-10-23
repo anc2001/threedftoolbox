@@ -100,7 +100,8 @@ def parse_room(
     do_intersections=True,
     invalid_scene_ids = [],
     invalid_jids = [],
-    largest_allowed_dim = None
+    largest_allowed_dim = None,
+    skip = False,
 ):
     with open(house_path, "r") as f:
         house = json.load(f)
@@ -126,7 +127,6 @@ def parse_room(
     for mm in house["mesh"]:
         meshes_in_scene[mm["uid"]] = mm
 
-    all_meshes = []
     for room in house["scene"]["room"]:
         room_id = room["instanceid"]
 
@@ -136,40 +136,24 @@ def parse_room(
         if room_id in unique_scene_ids:
             continue
 
-        count = 0
+        room_dir = output_path / f"{house_name}_{room_id}"
+        if skip and (room_dir / "all_info.pkl").exists():
+            unique_scene_ids.append(room_id)
+            continue
+
+        # Furniture in room
+        furniture_in_room = []
+        # Extra meshes in room
+        extra_meshes_in_room = []
         for child in room["children"]:
             ref = child["ref"]
-            if ref in furniture_in_scene:
+            if child["ref"] in furniture_in_scene:
                 # If scale is very small/big ignore this scene
                 if any(si < 1e-5 for si in child["scale"]):
                     return
                 if any(si > 5 for si in child["scale"]):
                     return
-            elif ref in meshes_in_scene:
-                mesh_data = meshes_in_scene[ref]
-                verts = np.asarray(mesh_data["xyz"]).reshape(-1, 3)
-                faces = np.asarray(mesh_data["faces"]).reshape(-1, 3)
-                mesh_type = mesh_data["type"]
 
-                all_meshes.append((verts, faces, mesh_type))
-                count += 1
-            else:
-                continue
-
-        floor_meshes = [m for m in all_meshes if m[2] == "Floor"]
-        if len(floor_meshes) == 0:
-            continue
-        floor_vs_original, floor_fs = merge_repeated_vertices(
-            *combine_objs(floor_meshes)
-        )
-        floor_min_bound = np.amin(floor_vs_original, axis = 0)
-        floor_max_bound = np.amax(floor_vs_original, axis = 0)
-        floor_centroid = np.mean([floor_min_bound, floor_max_bound], axis = 0)
-
-        all_furnitures = []
-        for child in room["children"]:
-            ref = child["ref"]
-            if ref in furniture_in_scene:
                 finstance = Instance(
                     furniture_in_scene[ref],
                     child["pos"],
@@ -179,10 +163,29 @@ def parse_room(
                 modelid = finstance.info.jid
                 meshfile = str(threedfuture_dir / modelid  / "raw_model.obj")
                 m = trimesh.load(meshfile, force='mesh')
-                all_furnitures.append((m, finstance))
+                furniture_in_room.append((m, finstance))
+            elif child["ref"] in meshes_in_scene:
+                mesh_data = meshes_in_scene[ref]
+                verts = np.asarray(mesh_data["xyz"]).reshape(-1, 3)
+                faces = np.asarray(mesh_data["faces"]).reshape(-1, 3)
+                mesh_type = mesh_data["type"]
+
+                extra_meshes_in_room.append((verts, faces, mesh_type))
+            else:
+                continue
+
+        floor_meshes = [m for m in extra_meshes_in_room if m[2] == "Floor"]
+        if len(floor_meshes) == 0:
+            continue
+        floor_vs_original, floor_fs = merge_repeated_vertices(
+            *combine_objs(floor_meshes)
+        )
+        floor_min_bound = np.amin(floor_vs_original, axis = 0)
+        floor_max_bound = np.amax(floor_vs_original, axis = 0)
+        floor_centroid = np.mean([floor_min_bound, floor_max_bound], axis = 0)
 
         bboxes = []
-        for m, finstance in all_furnitures:
+        for m, finstance in furniture_in_room:
             object_verts = np.array(m.vertices)
             object_verts *= finstance.scale 
             object_min_bound = np.amin(object_verts, axis = 0)
@@ -219,14 +222,13 @@ def parse_room(
                 return
 
         all_infos["floor_fs"] = floor_fs 
-        if len(all_furnitures) == 0:
+        if len(furniture_in_room) == 0:
             return
 
-        all_infos["furnitures"] = [fur[1] for fur in all_furnitures]
+        all_infos["furnitures"] = [fur[1] for fur in furniture_in_room]
         all_infos["bboxes"] = bboxes
         all_infos["scene_id"] = room_id
 
-        room_dir = output_path / f"{house_name}_{room_id}"
         room_dir.mkdir(exist_ok = True)
         with open(room_dir / "all_info.pkl", "wb") as f:
             pickle.dump(all_infos, f, 2)
@@ -284,6 +286,11 @@ if __name__ == "__main__":
         help="text file of invalid rooms",
         default=None,
     )
+    parser.add_argument(
+        "--skip", 
+        action="store_true", 
+        help="whether to skip rooms that have already been parsed"
+    )
     args = parser.parse_args()
 
     model_info = json.load(open(args.model_info_path, "r", encoding="utf-8"))
@@ -325,8 +332,5 @@ if __name__ == "__main__":
             invalid_scene_ids = invalid_scene_ids,
             invalid_jids = invalid_jids,
             largest_allowed_dim = largest_allowed_dim,
+            skip = args.skip,
         )
-
-    with open(args.output_path / 'scene_ids.txt', 'wb') as f:
-        for scene_id in unique_scene_ids:
-            f.write(f'{scene_id}\n')
