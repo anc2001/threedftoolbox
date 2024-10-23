@@ -21,6 +21,7 @@ from scipy.spatial.transform import Rotation
 
 import argparse
 
+
 def create_floor_mesh(loop_vs_outer, floor_thickness=0.1):
     # Create shapely polygon for the top face
     top_face_polygon = Polygon(loop_vs_outer)
@@ -70,12 +71,14 @@ def create_floor_mesh(loop_vs_outer, floor_thickness=0.1):
 
     return floor_mesh
 
+
 def merge_repeated_vertices(vertices, faces):
     unique_vertices, unique_indices = np.unique(vertices, axis=0, return_inverse=True)
     # print(vertices)
     # print(unique_vertices[unique_indices])
     reindexed_faces = unique_indices[faces]
     return unique_vertices, reindexed_faces
+
 
 def combine_objs(objs):
     offset = 0
@@ -91,6 +94,7 @@ def combine_objs(objs):
     faces = np.concatenate(faces, axis=0)
     return verts, faces
 
+
 def parse_room(
     unique_scene_ids,
     house_path,
@@ -98,10 +102,10 @@ def parse_room(
     output_path,
     room_type=None,
     do_intersections=True,
-    invalid_scene_ids = [],
-    invalid_jids = [],
-    largest_allowed_dim = None,
-    skip = False,
+    invalid_scene_ids=[],
+    invalid_jids=[],
+    largest_allowed_dim=None,
+    skip=False,
 ):
     with open(house_path, "r") as f:
         house = json.load(f)
@@ -110,7 +114,11 @@ def parse_room(
 
     furniture_in_scene = defaultdict()
     for furniture in house["furniture"]:
-        if "valid" in furniture and furniture["valid"] and furniture["jid"] not in invalid_jids:
+        if (
+            "valid" in furniture
+            and furniture["valid"]
+            and furniture["jid"] not in invalid_jids
+        ):
             f = Furniture(
                 furniture["uid"],
                 furniture["jid"],
@@ -161,8 +169,8 @@ def parse_room(
                     child["scale"],
                 )
                 modelid = finstance.info.jid
-                meshfile = str(threedfuture_dir / modelid  / "raw_model.obj")
-                m = trimesh.load(meshfile, force='mesh')
+                meshfile = str(threedfuture_dir / modelid / "raw_model.obj")
+                m = trimesh.load(meshfile, force="mesh")
                 furniture_in_room.append((m, finstance))
             elif child["ref"] in meshes_in_scene:
                 mesh_data = meshes_in_scene[ref]
@@ -180,48 +188,47 @@ def parse_room(
         floor_vs_original, floor_fs = merge_repeated_vertices(
             *combine_objs(floor_meshes)
         )
-        floor_min_bound = np.amin(floor_vs_original, axis = 0)
-        floor_max_bound = np.amax(floor_vs_original, axis = 0)
-        floor_centroid = np.mean([floor_min_bound, floor_max_bound], axis = 0)
+        floor_min_bound = np.amin(floor_vs_original, axis=0)
+        floor_max_bound = np.amax(floor_vs_original, axis=0)
+        floor_centroid = np.mean([floor_min_bound, floor_max_bound], axis=0)
 
         bboxes = []
         for m, finstance in furniture_in_room:
             object_verts = np.array(m.vertices)
-            object_verts *= finstance.scale 
-            object_min_bound = np.amin(object_verts, axis = 0)
-            object_max_bound = np.amax(object_verts, axis = 0)
+            object_verts *= finstance.scale
+            object_min_bound = np.amin(object_verts, axis=0)
+            object_max_bound = np.amax(object_verts, axis=0)
             extent = (object_max_bound - object_min_bound) / 2
 
-            rotvec = Rotation.from_quat(finstance.rot).as_rotvec() 
+            rotvec = Rotation.from_quat(finstance.rot).as_rotvec()
             theta = rotvec[1]
             R = np.zeros((3, 3))
-            R[0 ,0] = np.cos(theta)
+            R[0, 0] = np.cos(theta)
             R[0, 2] = -np.sin(theta)
             R[2, 0] = np.sin(theta)
             R[2, 2] = np.cos(theta)
             R[1, 1] = 1
             object_verts = object_verts.dot(R) + finstance.pos - floor_centroid
-            object_min_bound = np.amin(object_verts, axis = 0)
-            object_max_bound = np.amax(object_verts, axis = 0)
-            center = np.mean([object_min_bound, object_max_bound], axis = 0)
+            object_min_bound = np.amin(object_verts, axis=0)
+            object_max_bound = np.amax(object_verts, axis=0)
+            center = np.mean([object_min_bound, object_max_bound], axis=0)
 
-            bbox = {
-                "rotation" : rotvec[1:2],
-                "size" : extent,
-                "translation" : center
-            }
+            bbox = {"rotation": rotvec[1:2], "size": extent, "translation": center}
             bboxes.append(bbox)
 
         all_infos = {}
         all_infos["floor_verts"] = floor_vs_original - floor_centroid
         if largest_allowed_dim:
-            scene_min_bound = np.amin(all_infos["floor_verts"], axis = 0)
-            scene_max_bound = np.amax(all_infos["floor_verts"], axis = 0)
+            scene_min_bound = np.amin(all_infos["floor_verts"], axis=0)
+            scene_max_bound = np.amax(all_infos["floor_verts"], axis=0)
             scene_extent = scene_max_bound - scene_min_bound
-            if scene_extent[0] > largest_allowed_dim or scene_extent[2] > largest_allowed_dim:
+            if (
+                scene_extent[0] > largest_allowed_dim
+                or scene_extent[2] > largest_allowed_dim
+            ):
                 return
 
-        all_infos["floor_fs"] = floor_fs 
+        all_infos["floor_fs"] = floor_fs
         if len(furniture_in_room) == 0:
             return
 
@@ -229,11 +236,12 @@ def parse_room(
         all_infos["bboxes"] = bboxes
         all_infos["scene_id"] = room_id
 
-        room_dir.mkdir(exist_ok = True)
+        room_dir.mkdir(exist_ok=True)
         with open(room_dir / "all_info.pkl", "wb") as f:
             pickle.dump(all_infos, f, 2)
 
         unique_scene_ids.append(room_id)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -265,7 +273,7 @@ if __name__ == "__main__":
         "--bounds-file",
         type=Path,
         help="option to specify largest allowed scene size, room-type must be specified",
-        default=None
+        default=None,
     )
     parser.add_argument(
         "--room-type",
@@ -287,9 +295,9 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "--skip", 
-        action="store_true", 
-        help="whether to skip rooms that have already been parsed"
+        "--skip",
+        action="store_true",
+        help="whether to skip rooms that have already been parsed",
     )
     args = parser.parse_args()
 
@@ -299,27 +307,29 @@ if __name__ == "__main__":
         model_info_dict[model["model_id"]] = model
 
     if args.invalid_jids:
-        with open(args.invalid_jids, 'rb') as f:
+        with open(args.invalid_jids, "rb") as f:
             invalid_jids = set(l.strip() for l in f)
     else:
         invalid_jids = []
 
     if args.invalid_scene_ids:
-        with open(args.invalid_scene_ids, 'rb') as f:
+        with open(args.invalid_scene_ids, "rb") as f:
             invalid_scene_ids = set(l.strip() for l in f)
     else:
         invalid_scene_ids = []
 
     if args.bounds_file:
-        with open(args.bounds_file, 'rb') as f:
+        with open(args.bounds_file, "rb") as f:
             bounds_config = yaml.safe_load(f)
         if not args.room_type:
-            raise ValueError(f"room type should be specified to specify largest allowed scene size")
-        largest_allowed_dim = bounds_config[args.room_type]['largest_allowed_dim']
+            raise ValueError(
+                f"room type should be specified to specify largest allowed scene size"
+            )
+        largest_allowed_dim = bounds_config[args.room_type]["largest_allowed_dim"]
     else:
         largest_allowed_dim = None
 
-    args.output_path.mkdir(exist_ok = True, parents = True)
+    args.output_path.mkdir(exist_ok=True, parents=True)
     house_paths = list(args.threedf_dir.glob("*"))
     unique_scene_ids = []
     for house_path in tqdm(house_paths):
@@ -329,8 +339,8 @@ if __name__ == "__main__":
             args.threedfuture_dir,
             args.output_path,
             room_type=args.room_type,
-            invalid_scene_ids = invalid_scene_ids,
-            invalid_jids = invalid_jids,
-            largest_allowed_dim = largest_allowed_dim,
-            skip = args.skip,
+            invalid_scene_ids=invalid_scene_ids,
+            invalid_jids=invalid_jids,
+            largest_allowed_dim=largest_allowed_dim,
+            skip=args.skip,
         )
