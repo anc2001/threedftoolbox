@@ -1,25 +1,20 @@
 import json
-import sys
 import yaml
+import pickle
+import argparse
 from collections import defaultdict
 import numpy as np
 import math
-from functools import reduce
 from PIL import Image
 from pathlib import Path
 from tqdm import tqdm
-from scipy import ndimage
-from PIL import Image, ImageDraw
 import random
 import trimesh
+
 from shapely.geometry import Polygon
-from threedftoolbox.render.render_depth_wall import render_mesh_vc
 import threedftoolbox.scripts.utils as threedfutils
 from threedftoolbox.scripts.scene import Instance, Furniture
-import pickle
 from scipy.spatial.transform import Rotation
-
-import argparse
 
 
 def create_floor_mesh(loop_vs_outer, floor_thickness=0.1):
