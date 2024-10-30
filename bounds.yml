@@ -1,8 +1,11 @@
 bedroom:
   largest_allowed_dim: 6.2
 
-living_room:
-  largest_allowed_dim: None
+livingroom:
+  largest_allowed_dim: 12.4 
+
+diningroom:
+  largest_allowed_dim: 12.4 
 
 library:
-  largest_allowed_dim: None
+  largest_allowed_dim: 6.2

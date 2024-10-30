@@ -165,7 +165,10 @@ def parse_room(
                 )
                 modelid = finstance.info.jid
                 meshfile = str(threedfuture_dir / modelid / "raw_model.obj")
-                m = trimesh.load(meshfile, force="mesh")
+                try:
+                    m = trimesh.load(meshfile, force="mesh")
+                except:
+                    continue
                 furniture_in_room.append((m, finstance))
             elif child["ref"] in meshes_in_scene:
                 mesh_data = meshes_in_scene[ref]
@@ -312,6 +315,10 @@ if __name__ == "__main__":
             invalid_scene_ids = set(l.strip() for l in f)
     else:
         invalid_scene_ids = []
+
+    if args.room_type is not None:
+        if not args.room_type in ["bedroom", "livingroom", "diningroom", "library"]:
+            raise ValueError(f"{args.room_type} not recognized")
 
     if args.bounds_file:
         with open(args.bounds_file, "rb") as f:
