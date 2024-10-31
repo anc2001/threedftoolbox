@@ -2,10 +2,10 @@ bedroom:
   largest_allowed_dim: 6.2
 
 livingroom:
-  largest_allowed_dim: 12.4 
+  largest_allowed_dim: 6.2 
 
 diningroom:
-  largest_allowed_dim: 12.4 
+  largest_allowed_dim: 6.2 
 
 library:
   largest_allowed_dim: 6.2
